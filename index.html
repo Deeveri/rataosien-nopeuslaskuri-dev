@@ -96,7 +96,7 @@
     <div>
       <h1>Rataosien nopeuslaskuri</h1>
       <p>Laskee junien keskinopeuksia rataosien todellisten välimatkojen perusteella.</p>
-      <div class="version">Kehitysversio 2.05</div>
+      <div class="version">Kehitysversio 2.07</div>
     </div>
     <div class="theme-toggle" aria-label="Teema">
       <button type="button" data-theme="dark">Tumma</button>
@@ -110,7 +110,7 @@
   <section class="card" id="speedCard">
     <h2>Nopeimmat junat rataosalla</h2>
     <p>Hakee valitun päivän junat Fintrafficin/Digitrafficin rajapinnasta ja laskee keskinopeuden valitulla rataosalla todellisten välimatkojen perusteella.</p>
-    <p>Keskinopeus lasketaan vain yli 10 kilometrin matkalta. Jos rataosalla on tiheästi liikennepaikkoja, sivu yhdistää peräkkäisiä liikennepaikkavälejä, kunnes laskettava matka ylittää 10 km. Tämä vähentää yhden minuutin aikataulutarkkuudesta johtuvia pyöristysvirheitä.</p>
+    <p>Keskinopeus lasketaan vain yli 10 kilometrin matkalta. Jos rataosalla on tiheästi liikennepaikkoja, sivu yhdistää peräkkäisiä liikennepaikkavälejä, kunnes laskettava matka ylittää 10 km. Tämä vähentää yhden minuutin aikataulutarkkuudesta johtuvia pyöristysvirheitä. Lisäksi yli 220 km/h keskinopeudet jätetään pois epärealistisina.</p>
 
     <div class="one">
       <label for="speedRouteSelect">Rataosa nopeushaussa</label>
@@ -165,7 +165,7 @@
   </section>
 </main>
 <footer>
-  Rataosien nopeuslaskuri · kehitysversio 2.05 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
+  Rataosien nopeuslaskuri · kehitysversio 2.07 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
 </footer>
 
 <script>
@@ -178,6 +178,25 @@ const App = (() => {
   // Selaimessa oma HTTP-header voi joissakin ympäristöissä aiheuttaa CORS-esitarkistuksen.
   // Pidetään haku yksinkertaisena GET-pyyntönä, jotta GitHub Pages / iPad / iPhone toimivat varmemmin.
   const MIN_DISTANCE_KM = 10;
+  const MAX_PLAUSIBLE_AVERAGE_SPEED = 220;
+  // Karkea turvaraja junatyypeittäin. Varsinaista junakohtaista sn-tietoa ei
+  // aina löydy Digitrafficin junadatasta, joten tätä käytetään vain selvästi
+  // mahdottomien laskentatulosten suodattamiseen. Erityisesti tavarajunien
+  // (T) yli 120 km/h keskinopeudet ovat tässä käyttötarkoituksessa virheellisiä.
+  const TRAIN_TYPE_PLAUSIBLE_MAX = {
+    T: 120,
+    VET: 120,
+    TYO: 100,
+    MV: 120,
+    HDM: 160,
+    HL: 160,
+    PYO: 160,
+    H: 200,
+    IC: 220,
+    S: 220,
+    AE: 220,
+    P: 200
+  };
   const trainCache = new Map();
   const routeData = cleanRoutes(ROUTES);
 
@@ -400,16 +419,16 @@ const App = (() => {
     if (cached[key]) return cached[key];
 
     const map = new Map();
-    for (const row of (train.timeTableRows || [])) {
+    for (const [idx, row] of (train.timeTableRows || []).entries()) {
       const code = normCode(row.stationShortCode);
       if (!code) continue;
       const time = rowTime(row, actualOnly);
       if (!time || !Number.isFinite(time.ms)) continue;
       if (!map.has(code)) map.set(code, []);
-      map.get(code).push({ row, time });
+      map.get(code).push({ row, time, idx });
     }
     for (const list of map.values()) {
-      list.sort((a, b) => a.time.ms - b.time.ms);
+      list.sort((a, b) => a.idx - b.idx || a.time.ms - b.time.ms);
     }
     cached[key] = map;
     return map;
@@ -423,18 +442,32 @@ const App = (() => {
     const starts = rowsForCode(train, startCode, actualOnly);
     const ends = rowsForCode(train, endCode, actualOnly);
     if (!starts.length || !ends.length) return null;
-    const startPref = starts.slice().sort((a,b) => rowPref(a.row,'start') - rowPref(b.row,'start'));
-    let best = null;
-    for (const s of startPref) {
-      const usableEnds = ends.filter(e => e.time.ms > s.time.ms).sort((a,b) => rowPref(a.row,'end') - rowPref(b.row,'end') || a.time.ms - b.time.ms);
-      if (!usableEnds.length) continue;
-      const e = usableEnds[0];
-      const minutes = (e.time.ms - s.time.ms) / 60000;
-      if (minutes <= 0) continue;
-      const candidate = { start: s, end: e, minutes };
-      if (!best || candidate.minutes < best.minutes) best = candidate;
+
+    // Digitraffic voi sisältää samalle liikennepaikalle sekä ARRIVAL- että
+    // DEPARTURE-rivin. Aiempi versio valitsi käytännössä lyhyimmän mahdollisen
+    // aikavälin, mikä vääristi keskinopeuksia etenkin lähellä määränpäätä.
+    // Nyt pari valitaan junan aikataulurivien järjestyksen mukaan: lähtörivin
+    // on oltava ennen määräriviä, ja lähtöön suositaan DEPARTURE-riviä sekä
+    // määräpaikkaan ARRIVAL-riviä.
+    const candidates = [];
+    for (const s of starts) {
+      for (const e of ends) {
+        if (typeof s.idx === 'number' && typeof e.idx === 'number' && e.idx <= s.idx) continue;
+        if (e.time.ms <= s.time.ms) continue;
+        const minutes = (e.time.ms - s.time.ms) / 60000;
+        if (minutes <= 0) continue;
+        candidates.push({ start: s, end: e, minutes });
+      }
     }
-    return best;
+    if (!candidates.length) return null;
+    candidates.sort((a, b) =>
+      rowPref(a.start.row, 'start') - rowPref(b.start.row, 'start') ||
+      a.start.idx - b.start.idx ||
+      rowPref(a.end.row, 'end') - rowPref(b.end.row, 'end') ||
+      a.end.idx - b.end.idx ||
+      a.minutes - b.minutes
+    );
+    return candidates[0];
   }
 
   function rowPref(row, role) {
@@ -478,7 +511,7 @@ const App = (() => {
         const timed = bestTimedPair(train, route[i].code, route[j].code, opts.actualOnly);
         if (!timed) continue;
         const speed = distance / (timed.minutes / 60);
-        if (!passesSpeedFilter(speed, opts.minSpeed, opts.maxSpeed)) continue;
+        if (!passesSpeedFilter(speed, opts.minSpeed, opts.maxSpeed, train)) continue;
         out.push(makeResult(train, routeName, route[i], route[j], distance, timed, speed, reversed));
         break;
       }
@@ -501,7 +534,7 @@ const App = (() => {
     const runs = [];
     let cur = [];
     for (const edge of edges) {
-      if (passesSpeedFilter(edge.speed, opts.minSpeed, opts.maxSpeed)) cur.push(edge);
+      if (passesSpeedFilter(edge.speed, opts.minSpeed, opts.maxSpeed, train)) cur.push(edge);
       else { if (cur.length >= 3) runs.push(cur); cur = []; }
     }
     if (cur.length >= 3) runs.push(cur);
@@ -517,7 +550,7 @@ const App = (() => {
       };
       if (timed.minutes <= 0) return null;
       const speed = distance / (timed.minutes / 60);
-      if (!passesSpeedFilter(speed, opts.minSpeed, opts.maxSpeed)) return null;
+      if (!passesSpeedFilter(speed, opts.minSpeed, opts.maxSpeed, train)) return null;
       const result = makeResult(train, routeName, route[first.i], route[last.i + 1], distance, timed, speed, reversed);
       result.note = `Korkean nopeuden jakso ${run.length} peräkkäisellä liikennepaikkavälillä.`;
       return result;
@@ -530,8 +563,15 @@ const App = (() => {
     return Number.isFinite(d) && d > 0 ? d : 0;
   }
 
-  function passesSpeedFilter(speed, min, max) {
+  function plausibleMaxForTrain(train) {
+    const type = String(train && train.trainType || '').trim().toUpperCase();
+    return TRAIN_TYPE_PLAUSIBLE_MAX[type] || MAX_PLAUSIBLE_AVERAGE_SPEED;
+  }
+
+  function passesSpeedFilter(speed, min, max, train) {
     if (!Number.isFinite(speed)) return false;
+    const plausibleMax = plausibleMaxForTrain(train);
+    if (speed > plausibleMax) return false;
     if (Number.isFinite(min) && speed < min) return false;
     if (Number.isFinite(max) && speed > max) return false;
     return true;
@@ -574,7 +614,7 @@ const App = (() => {
       updateStats(all, limited, opts.routeName);
       renderResults(limited);
       const capText = Number.isFinite(opts.maxSpeed) ? `${fmt(opts.minSpeed,0)}–${fmt(opts.maxSpeed,0)} km/h` : `vähintään ${fmt(opts.minSpeed,0)} km/h`;
-      els.speedStatus.textContent = `Haettu ${trains.length} junaa. Nopeushaku rajattu rataosaan ${opts.routeName} ja keskinopeuksiin ${capText}. Näytetään enintään ${opts.limit} nopeinta osumaa. Laskenta käyttää ${opts.actualOnly ? 'vain toteutuneita aikoja' : 'toteutuneita, arvioituja tai aikataulun mukaisia aikoja'}.`;
+      els.speedStatus.textContent = `Haettu ${trains.length} junaa. Nopeushaku rajattu rataosaan ${opts.routeName} ja keskinopeuksiin ${capText}. Näytetään enintään ${opts.limit} nopeinta osumaa. Laskenta käyttää ${opts.actualOnly ? 'vain toteutuneita aikoja' : 'toteutuneita, arvioituja tai aikataulun mukaisia aikoja'}. Selvästi junatyypille epärealistiset keskinopeudet jätetään pois; esimerkiksi T-junille käytetään 120 km/h turvarajaa.`;
     } catch (err) {
       els.speedStatus.className = 'status error';
       els.speedStatus.textContent = 'Junatietojen haku epäonnistui: ' + (err && err.message ? err.message : String(err));
