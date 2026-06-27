@@ -49,11 +49,13 @@
   select, input { width:100%; border:1px solid var(--border); border-radius:10px; background:var(--panel2); color:var(--text); padding:11px 12px; font-size:1rem; }
   input[type="checkbox"] { width:auto; transform:scale(1.15); margin-right:8px; }
   .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
-  .grid4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; }
+  .grid4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; align-items:end; }
+  .grid4 label { min-height:2.4em; display:flex; align-items:flex-end; }
   .one { margin-bottom:12px; }
   .checkrow { display:flex; align-items:flex-start; gap:6px; color:var(--dim); margin:10px 0; }
   .btnrow { display:flex; justify-content:flex-end; margin:18px 0 6px; }
   button.primary { cursor:pointer; border:0; border-radius:10px; background:var(--accent); color:#06141f; padding:12px 18px; font-weight:800; font-size:1rem; }
+  button.primary:disabled { opacity:.65; cursor:wait; }
   .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
   .stat { background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:13px; }
   .stat .label { color:var(--dim); font-size:.82rem; }
@@ -81,6 +83,7 @@
   @media (max-width:760px) {
     .header-inner { flex-direction:column; }
     .grid,.grid4,.stats,.cards3 { grid-template-columns:1fr; }
+    .grid4 label { min-height:0; display:block; }
     .btnrow { justify-content:stretch; }
     button.primary { width:100%; }
     table { font-size:.82rem; }
@@ -93,7 +96,7 @@
     <div>
       <h1>Rataosien nopeuslaskuri</h1>
       <p>Laskee junien keskinopeuksia rataosien todellisten välimatkojen perusteella.</p>
-      <div class="version">Kehitysversio 2.01</div>
+      <div class="version">Kehitysversio 2.05</div>
     </div>
     <div class="theme-toggle" aria-label="Teema">
       <button type="button" data-theme="dark">Tumma</button>
@@ -162,7 +165,7 @@
   </section>
 </main>
 <footer>
-  Rataosien nopeuslaskuri · kehitysversio 2.01 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
+  Rataosien nopeuslaskuri · kehitysversio 2.05 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
 </footer>
 
 <script>
@@ -172,11 +175,14 @@ const ROUTES = {"Helsinki–Turku satama":[{"name":"Helsinki asema","code":"Hki"
 
 const App = (() => {
   const API_BASE = 'https://rata.digitraffic.fi/api/v1';
-  const USER_HEADER = { 'Digitraffic-User': 'Rataosien-nopeuslaskuri/2.0' };
+  // Selaimessa oma HTTP-header voi joissakin ympäristöissä aiheuttaa CORS-esitarkistuksen.
+  // Pidetään haku yksinkertaisena GET-pyyntönä, jotta GitHub Pages / iPad / iPhone toimivat varmemmin.
   const MIN_DISTANCE_KM = 10;
   const trainCache = new Map();
+  const routeData = cleanRoutes(ROUTES);
 
   const defaultTrainTypes = ['Kaikki junatyypit','AE','HL','HDM','IC','IC2','P','PYO','S','T','VET'];
+  const trainRowIndexCache = new WeakMap();
   const $ = id => document.getElementById(id);
   const els = {};
 
@@ -216,8 +222,78 @@ const App = (() => {
     els.searchBtn.addEventListener('click', runSearch);
   }
 
+  function cleanRoutes(routes) {
+    const exclude = {
+      'Helsinki–Riihimäki': ['Pau', 'Pslt'],
+      'Kouvola–Pieksämäki': ['Kuv', 'Kvt', 'Kvla']
+    };
+    const cleaned = {};
+    for (const [name, original] of Object.entries(routes || {})) {
+      const banned = new Set((exclude[name] || []).map(normCode));
+      const filtered = (original || []).filter(p => !banned.has(normCode(p.code)));
+      cleaned[name] = normalizeRoute(filtered);
+    }
+    return cleaned;
+  }
+
+  function normalizeRoute(route) {
+    const out = [];
+    const seen = new Set();
+    let cumulative = 0;
+    for (let i = 0; i < route.length; i++) {
+      const src = route[i];
+      const code = normCode(src.code);
+      if (i > 0 && seen.has(code)) break; // uusi haaran alku tai sama paikka uudelleen
+      const item = { ...src };
+      if (out.length === 0) {
+        item.distanceFromPrevious = null;
+        item.cumulativeDistance = 0;
+        out.push(item);
+        if (code) seen.add(code);
+        continue;
+      }
+      let d = Number(item.distanceFromPrevious);
+      if (!Number.isFinite(d) || d <= 0) {
+        const prevKm = parseKm(out[out.length - 1].km);
+        const curKm = parseKm(item.km);
+        const kmDiff = Math.abs(curKm - prevKm);
+        // Paikataan vain selvästi samaan linjaan kuuluva lyhyt puuttuva väli.
+        // Muut null-välit ovat yleensä sivuhaaran tai vaihtoehtoisen kulkutien alkuja.
+        if (Number.isFinite(kmDiff) && kmDiff > 0 && kmDiff < 5) d = kmDiff;
+        else break;
+      }
+      cumulative += d;
+      item.distanceFromPrevious = d;
+      item.cumulativeDistance = cumulative;
+      out.push(item);
+      if (code) seen.add(code);
+    }
+    return out;
+  }
+
+  function makeReverseRoute(route) {
+    const reversed = [];
+    for (let i = route.length - 1; i >= 0; i--) {
+      const item = { ...route[i] };
+      const nextOriginal = route[i + 1];
+      item.distanceFromPrevious = reversed.length === 0 ? null : Number(nextOriginal && nextOriginal.distanceFromPrevious);
+      reversed.push(item);
+    }
+    let cumulative = 0;
+    for (let i = 0; i < reversed.length; i++) {
+      if (i === 0) reversed[i].cumulativeDistance = 0;
+      else {
+        const d = Number(reversed[i].distanceFromPrevious);
+        if (!Number.isFinite(d) || d <= 0) reversed[i].distanceFromPrevious = null;
+        cumulative += Number(reversed[i].distanceFromPrevious) || 0;
+        reversed[i].cumulativeDistance = cumulative;
+      }
+    }
+    return reversed;
+  }
+
   function getSortedRouteNames() {
-    return Object.keys(ROUTES).sort((a, b) =>
+    return Object.keys(routeData).sort((a, b) =>
       a.localeCompare(b, 'fi', { sensitivity: 'base' })
     );
   }
@@ -256,11 +332,36 @@ const App = (() => {
 
   async function fetchTrains(date) {
     if (trainCache.has(date)) return trainCache.get(date);
-    const res = await fetch(`${API_BASE}/trains/${date}`, { headers: USER_HEADER });
-    if (!res.ok) throw new Error(`Digitraffic vastasi HTTP ${res.status}`);
-    const data = await res.json();
-    trainCache.set(date, data);
-    return data;
+    if (!date) throw new Error('Valitse päivä.');
+
+    // Ensisijainen Digitraffic-kutsu. Toinen URL on varmistus siltä varalta,
+    // että rajapinnan reititys muuttuu tai selain käsittelee polkua poikkeavasti.
+    const urls = [
+      `${API_BASE}/trains/${encodeURIComponent(date)}`,
+      `${API_BASE}/trains?departure_date=${encodeURIComponent(date)}`
+    ];
+
+    let lastError = null;
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { method: 'GET', mode: 'cors' });
+        if (!res.ok) {
+          lastError = new Error(`Digitraffic vastasi HTTP ${res.status}`);
+          continue;
+        }
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+          lastError = new Error('Digitraffic palautti odottamattoman vastauksen.');
+          continue;
+        }
+        trainCache.set(date, data);
+        return data;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    throw lastError || new Error('Junatietojen haku epäonnistui.');
   }
 
   function trainLabel(train) {
@@ -285,12 +386,37 @@ const App = (() => {
     return null;
   }
 
+  function normCode(value) {
+    return String(value || '').trim().toLocaleUpperCase('fi-FI');
+  }
+
+  function getTrainRowIndex(train, actualOnly) {
+    let cached = trainRowIndexCache.get(train);
+    if (!cached) {
+      cached = { all: null, actual: null };
+      trainRowIndexCache.set(train, cached);
+    }
+    const key = actualOnly ? 'actual' : 'all';
+    if (cached[key]) return cached[key];
+
+    const map = new Map();
+    for (const row of (train.timeTableRows || [])) {
+      const code = normCode(row.stationShortCode);
+      if (!code) continue;
+      const time = rowTime(row, actualOnly);
+      if (!time || !Number.isFinite(time.ms)) continue;
+      if (!map.has(code)) map.set(code, []);
+      map.get(code).push({ row, time });
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.time.ms - b.time.ms);
+    }
+    cached[key] = map;
+    return map;
+  }
+
   function rowsForCode(train, code, actualOnly) {
-    return (train.timeTableRows || [])
-      .filter(row => row.stationShortCode === code)
-      .map(row => ({ row, time: rowTime(row, actualOnly) }))
-      .filter(x => x.time && Number.isFinite(x.time.ms))
-      .sort((a,b) => a.time.ms - b.time.ms);
+    return getTrainRowIndex(train, actualOnly).get(normCode(code)) || [];
   }
 
   function bestTimedPair(train, startCode, endCode, actualOnly) {
@@ -317,12 +443,13 @@ const App = (() => {
   }
 
   function analyzeRoute(trains, routeName, opts) {
-    const route = ROUTES[routeName] || [];
+    const route = routeData[routeName] || [];
+    const reverseRoute = makeReverseRoute(route);
     const all = [];
     for (const train of trains) {
       if (!trainMatchesType(train, opts.trainType)) continue;
       all.push(...analyzeTrainOnRoute(train, routeName, route, opts, false));
-      all.push(...analyzeTrainOnRoute(train, routeName, route.slice().reverse(), opts, true));
+      all.push(...analyzeTrainOnRoute(train, routeName, reverseRoute, opts, true));
     }
     markSuspicious(all);
     return all.sort((a,b) => b.speed - a.speed);
@@ -332,12 +459,22 @@ const App = (() => {
     if (!Array.isArray(route) || route.length < 2) return [];
     if (opts.sustainedOnly) return analyzeSustainedTrain(train, routeName, route, opts, reversed);
 
+    const rowIndex = getTrainRowIndex(train, opts.actualOnly);
+    let routeHits = 0;
+    for (const p of route) {
+      if (rowIndex.has(normCode(p.code))) routeHits++;
+      if (routeHits >= 2) break;
+    }
+    if (routeHits < 2) return [];
+
     const out = [];
     for (let i = 0; i < route.length - 1; i++) {
+      if (!rowIndex.has(normCode(route[i].code))) continue;
       let distance = 0;
       for (let j = i + 1; j < route.length; j++) {
         distance += segmentDistance(route, j);
         if (distance <= MIN_DISTANCE_KM) continue;
+        if (!rowIndex.has(normCode(route[j].code))) continue;
         const timed = bestTimedPair(train, route[i].code, route[j].code, opts.actualOnly);
         if (!timed) continue;
         const speed = distance / (timed.minutes / 60);
@@ -354,6 +491,8 @@ const App = (() => {
     for (let i = 0; i < route.length - 1; i++) {
       const distance = segmentDistance(route, i + 1);
       if (!distance) continue;
+      const rowIndex = getTrainRowIndex(train, opts.actualOnly);
+      if (!rowIndex.has(normCode(route[i].code)) || !rowIndex.has(normCode(route[i+1].code))) continue;
       const timed = bestTimedPair(train, route[i].code, route[i+1].code, opts.actualOnly);
       if (!timed) continue;
       const speed = distance / (timed.minutes / 60);
@@ -401,7 +540,7 @@ const App = (() => {
   function makeResult(train, routeName, from, to, distance, timed, speed, reversed) {
     return {
       train, routeName, from, to, distance, timed, speed, reversed,
-      key: `${routeName}|${from.code}|${to.code}`,
+      key: `${routeName}|${normCode(from.code)}|${normCode(to.code)}`,
       note: 'Keskinopeus laskettu yli 10 kilometrin matkalta.'
     };
   }
@@ -419,6 +558,8 @@ const App = (() => {
   }
 
   async function runSearch() {
+    els.searchBtn.disabled = true;
+    els.searchBtn.textContent = 'Haetaan…';
     try {
       clearResults();
       const opts = readSearchOptions();
@@ -437,6 +578,9 @@ const App = (() => {
     } catch (err) {
       els.speedStatus.className = 'status error';
       els.speedStatus.textContent = 'Junatietojen haku epäonnistui: ' + (err && err.message ? err.message : String(err));
+    } finally {
+      els.searchBtn.disabled = false;
+      els.searchBtn.textContent = 'Hae junat';
     }
   }
 
@@ -505,7 +649,7 @@ const App = (() => {
   }
 
   function updateDistanceSection() {
-    const route = ROUTES[els.routeSelect.value] || [];
+    const route = routeData[els.routeSelect.value] || [];
     const pairs = route.map((p,i) => [String(i), `${p.name} (${p.code}) · km ${p.km}`]);
     fillSelect(els.fromSelect, pairs);
     fillSelect(els.toSelect, pairs);
@@ -515,7 +659,7 @@ const App = (() => {
   }
 
   function updateDistanceCards() {
-    const route = ROUTES[els.routeSelect.value] || [];
+    const route = routeData[els.routeSelect.value] || [];
     const a = Number(els.fromSelect.value);
     const b = Number(els.toSelect.value);
     if (!route.length || !Number.isFinite(a) || !Number.isFinite(b) || a === b) {
