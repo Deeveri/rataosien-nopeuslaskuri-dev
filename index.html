@@ -78,6 +78,10 @@
   .big { font-size:1.35rem; font-weight:800; }
   .ok { color:var(--ok); }
   .warn { color:var(--warn); }
+  .route-chain { margin-top:10px; line-height:1.7; }
+  .route-chain span { display:inline-block; }
+  .route-arrow { color:var(--dim); margin:0 4px; }
+  .form-hint { color:var(--dim); font-size:.84rem; margin-top:5px; }
   footer { max-width:940px; margin:0 auto; padding:4px 18px 32px; color:var(--dim); font-size:.82rem; text-align:center; }
   a { color:var(--accent); }
   @media (max-width:760px) {
@@ -96,7 +100,7 @@
     <div>
       <h1>Rataosien nopeuslaskuri</h1>
       <p>Laskee junien keskinopeuksia rataosien todellisten välimatkojen perusteella.</p>
-      <div class="version">Kehitysversio 2.07</div>
+      <div class="version">Kehitysversio 4.01</div>
     </div>
     <div class="theme-toggle" aria-label="Teema">
       <button type="button" data-theme="dark">Tumma</button>
@@ -145,8 +149,37 @@
   </section>
 
   <section class="card" id="distanceCard">
-    <h2>Liikennepaikkojen todelliset välimatkat</h2>
-    <p>Etäisyys lasketaan valitun rataosan liikennepaikkojen välillä.</p>
+    <h2>Rataverkon reitti- ja etäisyyslaskuri</h2>
+    <p>Valitse lähtö- ja määräliikennepaikka. Halutessasi voit pakottaa reitin yhden tai useamman kauttakulkupaikan kautta. Laskenta käyttää rataverkosta muodostettua graafia ja PDF:n todellisia välimatkoja.</p>
+    <datalist id="placeDatalist"></datalist>
+    <div class="grid">
+      <div>
+        <label for="networkFromInput">Lähtöliikennepaikka</label>
+        <input id="networkFromInput" list="placeDatalist" placeholder="Kirjoita nimi tai lyhenne, esim. Helsinki tai HKI">
+      </div>
+      <div>
+        <label for="networkToInput">Määräliikennepaikka</label>
+        <input id="networkToInput" list="placeDatalist" placeholder="Kirjoita nimi tai lyhenne, esim. Oulu tai OL">
+      </div>
+    </div>
+    <div class="one" style="margin-top:12px;">
+      <label for="viaPlaces">Kauttakulkupaikka tai -paikat (valinnainen)</label>
+      <input id="viaPlaces" list="placeDatalist" placeholder="esim. Tampere asema, Orivesi, Haapamäki, Jyväskylä, Kuopio">
+      <div class="form-hint">Kirjoita nimet tai lyhenteet pilkulla erotettuina siinä järjestyksessä, jonka kautta haluat reitin kulkevan.</div>
+    </div>
+    <div class="btnrow"><button class="primary" id="networkRouteBtn">Laske reitti</button></div>
+    <div class="cards3">
+      <div class="stat"><div class="label">Reitin todellinen pituus</div><div class="value ok" id="networkDistance">–</div></div>
+      <div class="stat"><div class="label">Rataosajaksoja</div><div class="value" id="networkPlaceCount">–</div></div>
+      <div class="stat"><div class="label">Osamatkoja</div><div class="value" id="networkLegCount">–</div></div>
+    </div>
+    <div class="status" id="networkStatus">Valitse lähtö- ja määräliikennepaikka ja paina Laske reitti.</div>
+    <div class="results" id="networkResult"></div>
+  </section>
+
+  <section class="card" id="distanceRouteCard">
+    <h2>Rataosan liikennepaikkojen todelliset välimatkat</h2>
+    <p>Etäisyys lasketaan valitun yksittäisen rataosan liikennepaikkojen välillä.</p>
     <div class="one"><label for="routeSelect">Rataosa välimatkalaskurissa</label><select id="routeSelect"></select></div>
     <div class="grid">
       <div><label for="fromSelect">Lähtöliikennepaikka</label><select id="fromSelect"></select></div>
@@ -165,7 +198,7 @@
   </section>
 </main>
 <footer>
-  Rataosien nopeuslaskuri · kehitysversio 2.07 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
+  Rataosien nopeuslaskuri · kehitysversio 4.01 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
 </footer>
 
 <script>
@@ -199,6 +232,7 @@ const App = (() => {
   };
   const trainCache = new Map();
   const routeData = cleanRoutes(ROUTES);
+  const graphData = buildRailGraph(routeData);
 
   const defaultTrainTypes = ['Kaikki junatyypit','AE','HL','HDM','IC','IC2','P','PYO','S','T','VET'];
   const trainRowIndexCache = new WeakMap();
@@ -209,14 +243,16 @@ const App = (() => {
     cacheEls();
     initTheme();
     fillRouteSelects();
+    fillNetworkPlaceSelectors();
     fillTrainTypes(defaultTrainTypes);
     setToday();
     bindEvents();
     updateDistanceSection();
+    calculateNetworkRoute();
   }
 
   function cacheEls() {
-    ['speedRouteSelect','routeSelect','fromSelect','toSelect','speedDate','minSpeed','maxSpeed','trainType','resultLimit','actualOnly','sustainedOnly','searchBtn','statTrains','statSegments','statFastest','speedStatus','results','trueDistance','kmDistance','distanceDiff','distanceStatus','routeTable'].forEach(id => els[id] = $(id));
+    ['speedRouteSelect','routeSelect','fromSelect','toSelect','networkFromInput','networkToInput','viaPlaces','placeDatalist','networkRouteBtn','networkDistance','networkPlaceCount','networkLegCount','networkStatus','networkResult','speedDate','minSpeed','maxSpeed','trainType','resultLimit','actualOnly','sustainedOnly','searchBtn','statTrains','statSegments','statFastest','speedStatus','results','trueDistance','kmDistance','distanceDiff','distanceStatus','routeTable'].forEach(id => els[id] = $(id));
   }
 
   function initTheme() {
@@ -239,6 +275,26 @@ const App = (() => {
     els.fromSelect.addEventListener('change', updateDistanceCards);
     els.toSelect.addEventListener('change', updateDistanceCards);
     els.searchBtn.addEventListener('click', runSearch);
+    els.networkRouteBtn.addEventListener('click', calculateNetworkRoute);
+    els.networkFromInput.addEventListener('change', calculateNetworkRoute);
+    els.networkToInput.addEventListener('change', calculateNetworkRoute);
+    setupEditablePlaceInput(els.networkFromInput);
+    setupEditablePlaceInput(els.networkToInput);
+  }
+
+  function setupEditablePlaceInput(input) {
+    if (!input) return;
+    const clearForTyping = () => {
+      // Lähtö- ja määräpaikan oletusarvo on vain ehdotus. Kun käyttäjä
+      // alkaa muokata kenttää, tyhjennetään kenttä, jotta vanhaa arvoa
+      // ei tarvitse poistaa käsin.
+      if (!input.dataset.userEdited) {
+        input.value = '';
+        input.dataset.userEdited = '1';
+      }
+    };
+    input.addEventListener('focus', clearForTyping);
+    input.addEventListener('pointerdown', clearForTyping);
   }
 
   function cleanRoutes(routes) {
@@ -325,6 +381,250 @@ const App = (() => {
     const preferred = names.includes('Helsinki–Riihimäki') ? 'Helsinki–Riihimäki' : names[0];
     els.speedRouteSelect.value = preferred;
     els.routeSelect.value = preferred;
+  }
+
+
+  function allNetworkPlaces() {
+    const byCode = new Map();
+    for (const route of Object.values(routeData)) {
+      for (const p of route) {
+        const code = normCode(p.code);
+        if (!code || byCode.has(code)) continue;
+        byCode.set(code, { code, name: p.name || code });
+      }
+    }
+    return Array.from(byCode.values()).sort((a,b) => {
+      const an = `${a.name} ${a.code}`;
+      const bn = `${b.name} ${b.code}`;
+      return an.localeCompare(bn, 'fi', { sensitivity: 'base' });
+    });
+  }
+
+  function fillNetworkPlaceSelectors() {
+    const places = allNetworkPlaces();
+    els.placeDatalist.innerHTML = '';
+    for (const p of places) {
+      for (const value of [`${p.name} (${p.code})`, p.name, p.code]) {
+        const opt = document.createElement('option');
+        opt.value = value;
+        els.placeDatalist.appendChild(opt);
+      }
+    }
+    const from = places.find(p => p.code === 'HKI') || places[0];
+    const to = places.find(p => p.code === 'OL') || places[places.length - 1];
+    if (from) els.networkFromInput.value = `${from.name} (${from.code})`;
+    if (to) els.networkToInput.value = `${to.name} (${to.code})`;
+  }
+
+  function buildRailGraph(routes) {
+    const nodes = new Map();
+    const adj = new Map();
+    const addNode = p => {
+      const code = normCode(p.code);
+      if (!code) return null;
+      if (!nodes.has(code)) nodes.set(code, { code, name: p.name || code });
+      if (!adj.has(code)) adj.set(code, []);
+      return code;
+    };
+    const addEdge = (a, b, d, routeName) => {
+      if (!a || !b || a === b || !Number.isFinite(d) || d <= 0) return;
+      const pushMin = (from, to) => {
+        const list = adj.get(from) || [];
+        const old = list.find(e => e.to === to);
+        if (!old) list.push({ to, distance: d, routeName });
+        else if (d < old.distance) { old.distance = d; old.routeName = routeName; }
+        adj.set(from, list);
+      };
+      pushMin(a, b);
+      pushMin(b, a);
+    };
+    for (const [routeName, route] of Object.entries(routes)) {
+      for (const p of route) addNode(p);
+      for (let i = 1; i < route.length; i++) {
+        const a = addNode(route[i - 1]);
+        const b = addNode(route[i]);
+        const d = Number(route[i].distanceFromPrevious);
+        addEdge(a, b, d, routeName);
+      }
+    }
+    return { nodes, adj };
+  }
+
+  function resolvePlaceToken(token) {
+    const raw = String(token || '').trim();
+    if (!raw) return null;
+    const code = normCode(raw.replace(/^.*\(([^)]+)\).*$/, '$1'));
+    if (graphData.nodes.has(code)) return code;
+    const normName = normalizeText(raw);
+    const matches = [];
+    for (const node of graphData.nodes.values()) {
+      if (normalizeText(node.name) === normName || normalizeText(`${node.name} (${node.code})`) === normName) matches.push(node.code);
+    }
+    if (matches.length === 1) return matches[0];
+    for (const node of graphData.nodes.values()) {
+      if (normalizeText(node.name).includes(normName)) matches.push(node.code);
+    }
+    return matches.length === 1 ? matches[0] : null;
+  }
+
+  function normalizeText(s) {
+    return String(s || '').trim().toLocaleLowerCase('fi-FI').replace(/\s+/g, ' ');
+  }
+
+  function calculateNetworkRoute() {
+    const start = resolvePlaceToken(els.networkFromInput.value);
+    const end = resolvePlaceToken(els.networkToInput.value);
+    const viaRaw = els.viaPlaces.value || '';
+    const viaTokens = viaRaw.split(',').map(s => s.trim()).filter(Boolean);
+    const viaCodes = [];
+    for (const token of viaTokens) {
+      const code = resolvePlaceToken(token);
+      if (!code) {
+        renderNetworkError(`Kauttakulkupaikkaa ”${token}” ei tunnistettu yksiselitteisesti. Käytä tarvittaessa liikennepaikan lyhennettä.`);
+        return;
+      }
+      viaCodes.push(code);
+    }
+    const targets = [start, ...viaCodes, end];
+    if (!start || !end || start === end) {
+      renderNetworkError('Valitse kaksi eri liikennepaikkaa.');
+      return;
+    }
+
+    let total = 0;
+    const legs = [];
+    let fullPath = [];
+    const allSections = [];
+
+    for (let i = 0; i < targets.length - 1; i++) {
+      const leg = shortestPath(targets[i], targets[i + 1]);
+      if (!leg) {
+        renderNetworkError(`Reittiä välille ${placeLabel(targets[i])} – ${placeLabel(targets[i + 1])} ei löytynyt.`);
+        return;
+      }
+
+      const sections = summarizeEdgesByRoute(leg.edges);
+      total += leg.distance;
+      legs.push({
+        from: targets[i],
+        to: targets[i + 1],
+        distance: leg.distance,
+        path: leg.path,
+        edges: leg.edges,
+        sections
+      });
+      allSections.push(...sections);
+
+      if (!fullPath.length) fullPath = leg.path.slice();
+      else fullPath.push(...leg.path.slice(1));
+    }
+
+    renderNetworkRoute({ total, path: fullPath, legs, viaCodes, sections: allSections });
+  }
+
+  function shortestPath(start, goal) {
+    if (!graphData.nodes.has(start) || !graphData.nodes.has(goal)) return null;
+    const dist = new Map([[start, 0]]);
+    const prev = new Map();
+    const visited = new Set();
+    const queue = [{ code: start, d: 0 }];
+    while (queue.length) {
+      queue.sort((a,b) => a.d - b.d);
+      const cur = queue.shift();
+      if (visited.has(cur.code)) continue;
+      visited.add(cur.code);
+      if (cur.code === goal) break;
+      for (const edge of graphData.adj.get(cur.code) || []) {
+        if (visited.has(edge.to)) continue;
+        const nd = cur.d + edge.distance;
+        if (nd < (dist.get(edge.to) ?? Infinity)) {
+          dist.set(edge.to, nd);
+          prev.set(edge.to, { from: cur.code, edge: { ...edge, from: cur.code } });
+          queue.push({ code: edge.to, d: nd });
+        }
+      }
+    }
+    if (!dist.has(goal)) return null;
+
+    const path = [];
+    const edges = [];
+    let cur = goal;
+    while (cur) {
+      path.push(cur);
+      if (cur === start) break;
+      const step = prev.get(cur);
+      if (!step) return null;
+      edges.push({ from: step.from, to: cur, distance: step.edge.distance, routeName: step.edge.routeName });
+      cur = step.from;
+    }
+    path.reverse();
+    edges.reverse();
+    return { distance: dist.get(goal), path, edges };
+  }
+
+  function renderNetworkError(text) {
+    els.networkDistance.textContent = '–';
+    els.networkPlaceCount.textContent = '–';
+    els.networkLegCount.textContent = '–';
+    els.networkStatus.className = 'status error';
+    els.networkStatus.textContent = text;
+    els.networkResult.innerHTML = '';
+  }
+
+  function renderNetworkRoute(result) {
+    els.networkDistance.textContent = fmt(result.total, 1) + ' km';
+    els.networkPlaceCount.textContent = String(result.sections.length);
+    els.networkLegCount.textContent = String(result.legs.length);
+    els.networkStatus.className = 'status';
+    const viaText = result.viaCodes.length
+      ? ` Reitti on pakotettu kulkemaan kauttakulkupaikkojen ${result.viaCodes.map(placeLabel).join(' → ')} kautta.`
+      : ' Reitti on lyhin tunnettu reitti rataverkkograafin perusteella.';
+    els.networkStatus.textContent = 'Laskenta perustuu peräkkäisten liikennepaikkojen todellisiin välimatkoihin.' + viaText;
+
+    const sectionsHtml = result.legs.map((leg, i) => {
+      const heading = result.legs.length > 1
+        ? `<div class="muted" style="margin-top:${i ? '12px' : '0'};"><strong>Osamatka ${i + 1}: ${escapeHtml(placeLabel(leg.from))} – ${escapeHtml(placeLabel(leg.to))}, ${fmt(leg.distance,1)} km</strong></div>`
+        : '';
+      const list = leg.sections.map(sec => `<li><strong>${escapeHtml(sec.routeName)}</strong>: ${escapeHtml(placeLabel(sec.from))} – ${escapeHtml(placeLabel(sec.to))}, <strong>${fmt(sec.distance,1)} km</strong></li>`).join('');
+      return `${heading}<ul class="muted">${list}</ul>`;
+    }).join('');
+
+    const routeNote = result.legs.length > 1
+      ? '<p class="muted">Kauttakulkupaikkojen vuoksi sama rataosa voi esiintyä useammassa osamatkassa. Sitä ei yhdistetä jälkikäteen, jotta esimerkiksi Seinäjoki–Tampere–Seinäjoki-tyyppinen pakotettu kierto ei muutu virheellisesti yhdeksi Seinäjoki–Seinäjoki-jaksoksi.</p>'
+      : '';
+
+    els.networkResult.innerHTML = `<div class="result"><div class="result-title">Kilometrilaskelma on koostettu näistä rataosajaksoista</div>${sectionsHtml}${routeNote}</div>`;
+  }
+
+  function summarizeEdgesByRoute(edges) {
+    const sections = [];
+    for (const edge of edges) {
+      const routeName = edge.routeName || 'Tuntematon rataosa';
+      const last = sections[sections.length - 1];
+      if (last && last.routeName === routeName) {
+        last.to = edge.to;
+        last.distance += edge.distance;
+      } else {
+        sections.push({ routeName, from: edge.from, to: edge.to, distance: edge.distance });
+      }
+    }
+    return sections;
+  }
+
+  function summarizeRouteSections(path) {
+    const edges = [];
+    for (let i = 0; i < path.length - 1; i++) {
+      const from = path[i];
+      const to = path[i + 1];
+      const edge = (graphData.adj.get(from) || []).find(e => e.to === to);
+      if (edge) edges.push({ from, to, distance: edge.distance, routeName: edge.routeName });
+    }
+    return summarizeEdgesByRoute(edges);
+  }
+
+  function placeLabel(code) {
+    const node = graphData.nodes.get(normCode(code));
+    return node ? `${node.name} (${node.code})` : code;
   }
 
   function fillTrainTypes(types) {
