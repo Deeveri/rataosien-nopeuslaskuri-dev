@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rataosien nopeuslaskuri</title>
+<title>Suomen rataverkon aikataulu- ja nopeustyökalut</title>
 <script>
 (function(){
   try {
@@ -47,6 +47,8 @@
   .card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:16px; box-shadow:0 8px 24px var(--shadow); }
   label { display:block; color:var(--dim); font-size:.86rem; margin:0 0 6px; }
   select, input { width:100%; border:1px solid var(--border); border-radius:10px; background:var(--panel2); color:var(--text); padding:11px 12px; font-size:1rem; }
+  select[multiple] { min-height:8.5rem; padding:8px 10px; }
+  select[multiple] option { padding:4px 6px; }
   input[type="checkbox"] { width:auto; transform:scale(1.15); margin-right:8px; }
   .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
   .grid4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; align-items:end; }
@@ -82,11 +84,50 @@
   .route-chain span { display:inline-block; }
   .route-arrow { color:var(--dim); margin:0 4px; }
   .form-hint { color:var(--dim); font-size:.84rem; margin-top:5px; }
+
+  .timetable-wrap { overflow-x:auto; margin-top:12px; border:1px solid #b8c0ca; border-radius:12px; background:#fff; color:#111; }
+  .timetable { min-width:900px; width:max-content; border-collapse:collapse; margin:0; font-size:.82rem; background:#fff; color:#111; }
+  .timetable th, .timetable td { border-right:1px solid #c9d1dc; border-bottom:1px solid #c9d1dc; padding:5px 6px; text-align:center; white-space:nowrap; color:#111; background:#fff; }
+  .timetable th:first-child, .timetable td:first-child { position:sticky; left:0; z-index:1; text-align:left; background:#f4f6f8; min-width:210px; }
+  .timetable thead th { position:sticky; top:0; z-index:2; background:#eef1f4; color:#111; }
+  .timetable thead th:first-child { z-index:3; background:#eef1f4; }
+  .timetable .train-head { font-weight:800; line-height:1.15; }
+  .timetable .train-meta { color:#4f5b68; font-size:.72rem; margin-top:2px; }
+  .timetable .place-km { color:#5d6875; font-size:.84em; }
+  .timetable .timepair { line-height:1.08; }
+  .timetable .timepair div + div { margin-top:1px; }
+  .timetable-page { margin-top:14px; }
+  .column-picker { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+  .column-picker label { display:inline-flex; align-items:center; gap:4px; border:1px solid var(--border); border-radius:999px; padding:5px 8px; background:var(--panel2); color:var(--text); margin:0; }
   footer { max-width:940px; margin:0 auto; padding:4px 18px 32px; color:var(--dim); font-size:.82rem; text-align:center; }
   a { color:var(--accent); }
+
+  .section-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+  .button-row { display:flex; gap:10px; flex-wrap:wrap; margin:12px 0; }
+  button.secondary { cursor:pointer; border:1px solid var(--border); border-radius:10px; background:var(--panel2); color:var(--text); padding:10px 14px; font-weight:800; font-size:.95rem; }
+  .small-note { font-size:.82rem; color:var(--dim); }
+  .print-only { display:none; }
+  @media print {
+    @page { size: A4 landscape; margin: 6mm; }
+    body { background:#fff !important; color:#000 !important; }
+    header, #speedCard, #networkCard, #distanceCard, footer, .no-print { display:none !important; }
+    #printCard { display:block !important; border:0; box-shadow:none; padding:0; margin:0; background:#fff !important; color:#000 !important; }
+    .print-only { display:block; }
+    .result, .card, .stat { background:#fff !important; color:#000 !important; border-color:#999; box-shadow:none; }
+    table { font-size:8pt; }
+    th,td { border-bottom:1px solid #aaa; color:#000 !important; }
+    .timetable-wrap { overflow:visible; border:0; background:#fff !important; color:#000 !important; }
+    .timetable-page { break-after:page; page-break-after:always; width:fit-content; max-width:100%; margin-left:auto; margin-right:auto; }
+    .timetable-page:last-child { break-after:auto; page-break-after:auto; }
+    .timetable { width:auto; min-width:0; font-size:7.2pt; table-layout:auto; background:#fff !important; color:#000 !important; margin-left:auto; margin-right:auto; }
+    .timetable th, .timetable td { padding:2px 3px; background:#fff !important; color:#000 !important; border-color:#999; }
+    .timetable th:first-child, .timetable td:first-child, .timetable thead th { position:static; background:#fff !important; color:#000 !important; }
+    .timetable th:first-child, .timetable td:first-child { min-width:95px; max-width:150px; white-space:normal; }
+    .timetable .train-meta, .timetable .place-km { color:#333 !important; }
+  }
   @media (max-width:760px) {
     .header-inner { flex-direction:column; }
-    .grid,.grid4,.stats,.cards3 { grid-template-columns:1fr; }
+    .grid,.grid3,.grid4,.stats,.cards3 { grid-template-columns:1fr; }
     .grid4 label { min-height:0; display:block; }
     .btnrow { justify-content:stretch; }
     button.primary { width:100%; }
@@ -98,9 +139,9 @@
 <header>
   <div class="header-inner">
     <div>
-      <h1>Rataosien nopeuslaskuri</h1>
-      <p>Laskee junien keskinopeuksia rataosien todellisten välimatkojen perusteella.</p>
-      <div class="version">Kehitysversio 4.01</div>
+      <h1>Suomen rataverkon aikataulu- ja nopeustyökalut</h1>
+      <p>Junien aikataulujen, rataosien keskinopeuksien, etäisyyksien ja reittien analysointiin.</p>
+      <div class="version">Kehitysversio 5.10</div>
     </div>
     <div class="theme-toggle" aria-label="Teema">
       <button type="button" data-theme="dark">Tumma</button>
@@ -114,30 +155,39 @@
   <section class="card" id="speedCard">
     <h2>Nopeimmat junat rataosalla</h2>
     <p>Hakee valitun päivän junat Fintrafficin/Digitrafficin rajapinnasta ja laskee keskinopeuden valitulla rataosalla todellisten välimatkojen perusteella.</p>
-    <p>Keskinopeus lasketaan vain yli 10 kilometrin matkalta. Jos rataosalla on tiheästi liikennepaikkoja, sivu yhdistää peräkkäisiä liikennepaikkavälejä, kunnes laskettava matka ylittää 10 km. Tämä vähentää yhden minuutin aikataulutarkkuudesta johtuvia pyöristysvirheitä. Lisäksi yli 220 km/h keskinopeudet jätetään pois epärealistisina.</p>
+    <p>Keskinopeus lasketaan vain riittävän pitkältä jaksolta. Sivun on löydettävä yli 10 kilometrin matka ja vähintään kuuden minuutin aikaväli. Jos rataosalla on tiheästi liikennepaikkoja tai aikaväli jää liian lyhyeksi, sivu yhdistää peräkkäisiä liikennepaikkavälejä pidemmäksi laskentajaksoksi. Tämä vähentää yhden minuutin aikataulutarkkuudesta johtuvia pyöristysvirheitä. Lisäksi selvästi junatyypille epärealistiset keskinopeudet jätetään pois.</p>
 
     <div class="one">
       <label for="speedRouteSelect">Rataosa nopeushaussa</label>
       <select id="speedRouteSelect"></select>
     </div>
 
-    <div class="grid4">
+    <div class="grid3">
       <div><label for="speedDate">Päivä</label><input type="date" id="speedDate"></div>
       <div><label for="minSpeed">Vähimmäiskeskinopeus km/h</label><input type="number" id="minSpeed" value="110" min="0" step="1"></div>
       <div><label for="maxSpeed">Enimmäiskeskinopeus km/h (valinnainen)</label><input type="number" id="maxSpeed" placeholder="Ei ylärajaa" min="0" step="1"></div>
-      <div><label for="trainType">Junatyyppi</label><select id="trainType"></select></div>
     </div>
 
-    <div class="one" style="margin-top:12px;">
-      <label for="resultLimit">Näytä enintään</label>
-      <input type="number" id="resultLimit" value="10" min="1" max="200" step="1">
+    <div class="grid">
+      <div class="one" style="margin-top:12px;">
+        <label for="resultLimit">Näytä enintään</label>
+        <input type="number" id="resultLimit" value="10" min="1" max="200" step="1">
+      </div>
+      <div class="one" style="margin-top:12px;">
+        <label for="nationalLimit">Koko maan listassa enintään</label>
+        <input type="number" id="nationalLimit" value="20" min="1" max="200" step="1">
+      </div>
     </div>
 
+    <label class="checkrow"><input type="checkbox" id="passengerOnly"> <span>Listaa vain aikataulunmukaiset matkustajajunat</span></label>
     <label class="checkrow"><input type="checkbox" id="actualOnly"> <span>Käytä vain toteutuneita ajoaikoja</span></label>
     <label class="checkrow"><input type="checkbox" id="sustainedOnly"> <span>Listaa vain junat, joiden keskinopeus pysyy korkeana vähintään kolmella peräkkäisellä liikennepaikkavälillä</span></label>
     <p class="muted">Tässä tilassa sivu etsii junalle pisimmän yhtenäisen korkean nopeuden jakson ja järjestää tulokset jakson keskinopeuden mukaan.</p>
 
-    <div class="btnrow"><button class="primary" id="searchBtn">Hae junat</button></div>
+    <div class="button-row">
+      <button class="primary" id="searchBtn">Hae junat rataosalta</button>
+      <button class="secondary" id="nationalBtn">Hae koko maan nopeimmat</button>
+    </div>
 
     <div class="stats">
       <div class="stat"><div class="label">Löytyneitä junia</div><div class="value" id="statTrains">–</div></div>
@@ -146,6 +196,28 @@
     </div>
     <div class="status" id="speedStatus">Valitse rataosa ja paina Hae junat.</div>
     <div class="results" id="results"></div>
+  </section>
+
+
+  <section class="card" id="printCard">
+    <h2>Tulostettava aikataulutaulukko</h2>
+    <p>Laadi valitun rataosan yhden päivän aikataulutaulukko. Junat näkyvät pystysarakkeina ja liikennepaikat riveinä. Valitse myös kulkusuunta, jotta samaan taulukkoon ei tule molempiin suuntiin kulkevia junia. Oletuksena taulukko käyttää aikataulunmukaisia tasaminuuttiaikoja.</p>
+    <div class="grid4 no-print">
+      <div><label for="printStartDate">Päivä</label><input type="date" id="printStartDate"></div>
+      <input type="hidden" id="printEndDate">
+      <div><label for="printRouteSelect">Rataosa tulosteeseen</label><select id="printRouteSelect"></select></div>
+      <div><label for="printDirection" id="printDirectionLabel">Kulkusuunta</label><select id="printDirection"></select></div>
+      <div><label for="printTrainType">Junatyypit</label><select id="printTrainType" multiple size="5"></select></div>
+    </div>
+    <label class="checkrow no-print"><input type="checkbox" id="printPassengerOnly" checked> <span>Listaa vain aikataulunmukaiset matkustajajunat</span></label>
+    <label class="checkrow no-print"><input type="checkbox" id="printFreightOnly"> <span>Listaa vain aikataulunmukaiset tavarajunat</span></label>
+    <label class="checkrow no-print"><input type="checkbox" id="printActualTimes"> <span>Näytä toteutuneet tai arvioidut ajat, jos ne löytyvät</span></label>
+    <div class="button-row no-print">
+      <button class="primary" id="buildPrintBtn">Laadi taulukko</button>
+      <button class="secondary" id="printPdfBtn">Tulosta / tallenna PDF:nä</button>
+    </div>
+    <div class="status" id="printStatus">Laadi ensin taulukko.</div>
+    <div id="printTable"></div>
   </section>
 
   <section class="card" id="distanceCard">
@@ -198,7 +270,7 @@
   </section>
 </main>
 <footer>
-  Rataosien nopeuslaskuri · kehitysversio 4.01 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
+  Rataosien nopeuslaskuri · kehitysversio 5.10 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
 </footer>
 
 <script>
@@ -211,11 +283,13 @@ const App = (() => {
   // Selaimessa oma HTTP-header voi joissakin ympäristöissä aiheuttaa CORS-esitarkistuksen.
   // Pidetään haku yksinkertaisena GET-pyyntönä, jotta GitHub Pages / iPad / iPhone toimivat varmemmin.
   const MIN_DISTANCE_KM = 10;
-  const MAX_PLAUSIBLE_AVERAGE_SPEED = 220;
+  const MIN_TIME_MINUTES = 6;
+  const MAX_PLAUSIBLE_AVERAGE_SPEED = 205;
   // Karkea turvaraja junatyypeittäin. Varsinaista junakohtaista sn-tietoa ei
   // aina löydy Digitrafficin junadatasta, joten tätä käytetään vain selvästi
-  // mahdottomien laskentatulosten suodattamiseen. Erityisesti tavarajunien
-  // (T) yli 120 km/h keskinopeudet ovat tässä käyttötarkoituksessa virheellisiä.
+  // mahdottomien laskentatulosten suodattamiseen. Matkustajajunille sallitaan
+  // pieni marginaali yli sn 200 -tason, koska toteutunut keskinopeus voi pyöristyä
+  // muutaman km/h sen yli. S-junien poikkeus: Kerava–Hakosilta-radalla sn on 220.
   const TRAIN_TYPE_PLAUSIBLE_MAX = {
     T: 120,
     VET: 120,
@@ -224,17 +298,18 @@ const App = (() => {
     HDM: 160,
     HL: 160,
     PYO: 160,
-    H: 200,
-    IC: 220,
-    S: 220,
-    AE: 220,
-    P: 200
+    H: 205,
+    IC: 205,
+    S: 205,
+    P: 205
   };
+  const PASSENGER_TRAIN_TYPES = new Set(['H','HDM','HL','HSM','IC','IC2','P','PYO','S']);
+  const ALL_KNOWN_TRAIN_TYPES = ['Kaikki junatyypit','H','HDM','HL','HLV','HSM','HV','IC','IC2','LIV','MUS','MUV','MV','P','PAI','PAR','PVS','PVV','PYO','RJ','S','SAA','T','TYO','V','VET','VEV','VLI','W'];
   const trainCache = new Map();
   const routeData = cleanRoutes(ROUTES);
   const graphData = buildRailGraph(routeData);
 
-  const defaultTrainTypes = ['Kaikki junatyypit','AE','HL','HDM','IC','IC2','P','PYO','S','T','VET'];
+  const defaultTrainTypes = ALL_KNOWN_TRAIN_TYPES;
   const trainRowIndexCache = new WeakMap();
   const $ = id => document.getElementById(id);
   const els = {};
@@ -245,14 +320,17 @@ const App = (() => {
     fillRouteSelects();
     fillNetworkPlaceSelectors();
     fillTrainTypes(defaultTrainTypes);
+    fillSelect(els.printTrainType, defaultTrainTypes.filter(t => t !== 'Kaikki junatyypit').map(t => [t, t]));
+    restoreSelections(els.printTrainType, new Set(PASSENGER_TRAIN_TYPES));
     setToday();
     bindEvents();
+    applyPrintTypePreset({ target: els.printPassengerOnly });
     updateDistanceSection();
     calculateNetworkRoute();
   }
 
   function cacheEls() {
-    ['speedRouteSelect','routeSelect','fromSelect','toSelect','networkFromInput','networkToInput','viaPlaces','placeDatalist','networkRouteBtn','networkDistance','networkPlaceCount','networkLegCount','networkStatus','networkResult','speedDate','minSpeed','maxSpeed','trainType','resultLimit','actualOnly','sustainedOnly','searchBtn','statTrains','statSegments','statFastest','speedStatus','results','trueDistance','kmDistance','distanceDiff','distanceStatus','routeTable'].forEach(id => els[id] = $(id));
+    ['speedRouteSelect','printRouteSelect','routeSelect','fromSelect','toSelect','networkFromInput','networkToInput','viaPlaces','placeDatalist','networkRouteBtn','networkDistance','networkPlaceCount','networkLegCount','networkStatus','networkResult','speedDate','minSpeed','maxSpeed','trainType','printTrainType','printDirection','resultLimit','nationalLimit','passengerOnly','actualOnly','sustainedOnly','searchBtn','nationalBtn','buildPrintBtn','printPdfBtn','printStartDate','printEndDate','printPassengerOnly','printFreightOnly','printActualTimes','printStatus','printTable','statTrains','statSegments','statFastest','speedStatus','results','trueDistance','kmDistance','distanceDiff','distanceStatus','routeTable'].forEach(id => els[id] = $(id));
   }
 
   function initTheme() {
@@ -275,6 +353,12 @@ const App = (() => {
     els.fromSelect.addEventListener('change', updateDistanceCards);
     els.toSelect.addEventListener('change', updateDistanceCards);
     els.searchBtn.addEventListener('click', runSearch);
+    els.nationalBtn.addEventListener('click', runNationalSearch);
+    els.buildPrintBtn.addEventListener('click', buildPrintableList);
+    els.printPdfBtn.addEventListener('click', printSelectedRows);
+    els.printRouteSelect.addEventListener('change', updatePrintDirectionOptions);
+    if (els.printPassengerOnly) els.printPassengerOnly.addEventListener('change', applyPrintTypePreset);
+    if (els.printFreightOnly) els.printFreightOnly.addEventListener('change', applyPrintTypePreset);
     els.networkRouteBtn.addEventListener('click', calculateNetworkRoute);
     els.networkFromInput.addEventListener('change', calculateNetworkRoute);
     els.networkToInput.addEventListener('change', calculateNetworkRoute);
@@ -378,9 +462,12 @@ const App = (() => {
     const options = names.map(name => [name, name]);
     fillSelect(els.speedRouteSelect, options);
     fillSelect(els.routeSelect, options);
+    fillSelect(els.printRouteSelect, options);
     const preferred = names.includes('Helsinki–Riihimäki') ? 'Helsinki–Riihimäki' : names[0];
     els.speedRouteSelect.value = preferred;
     els.routeSelect.value = preferred;
+    els.printRouteSelect.value = preferred;
+    updatePrintDirectionOptions();
   }
 
 
@@ -628,12 +715,14 @@ const App = (() => {
   }
 
   function fillTrainTypes(types) {
+    if (!els.trainType) return;
     const unique = Array.from(new Set(types.filter(Boolean)));
     if (!unique.includes('Kaikki junatyypit')) unique.unshift('Kaikki junatyypit');
     fillSelect(els.trainType, unique.map(t => [t, t]));
   }
 
   function fillSelect(select, pairs) {
+    if (!select) return;
     select.innerHTML = '';
     for (const [value, text] of pairs) {
       const option = document.createElement('option');
@@ -647,6 +736,8 @@ const App = (() => {
     const d = new Date();
     const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
     els.speedDate.value = local;
+    if (els.printStartDate) els.printStartDate.value = local;
+    if (els.printEndDate) els.printEndDate.value = local;
   }
 
   async function fetchTrains(date) {
@@ -689,8 +780,23 @@ const App = (() => {
     return `${type} ${number}`.trim() || 'Juna';
   }
 
-  function trainMatchesType(train, selectedType) {
-    return !selectedType || selectedType === 'Kaikki junatyypit' || train.trainType === selectedType;
+  function isPassengerTrain(train) {
+    const type = String(train && train.trainType || '').trim().toUpperCase();
+    return PASSENGER_TRAIN_TYPES.has(type);
+  }
+
+  function selectedValues(select) {
+    if (!select) return [];
+    return Array.from(select.selectedOptions || []).map(o => o.value).filter(Boolean);
+  }
+
+  function trainMatchesType(train, selectedType, passengerOnly = false) {
+    if (passengerOnly && !isPassengerTrain(train)) return false;
+    const type = String(train && train.trainType || '').trim().toUpperCase();
+    const selected = Array.isArray(selectedType) ? selectedType : (selectedType ? [selectedType] : []);
+    const normalized = selected.map(v => String(v || '').trim().toUpperCase()).filter(Boolean);
+    if (!normalized.length || normalized.includes('KAIKKI JUNATYYPIT')) return true;
+    return normalized.includes(type);
   }
 
   function rowTime(row, actualOnly) {
@@ -780,7 +886,7 @@ const App = (() => {
     const reverseRoute = makeReverseRoute(route);
     const all = [];
     for (const train of trains) {
-      if (!trainMatchesType(train, opts.trainType)) continue;
+      if (!trainMatchesType(train, opts.trainType, opts.passengerOnly)) continue;
       all.push(...analyzeTrainOnRoute(train, routeName, route, opts, false));
       all.push(...analyzeTrainOnRoute(train, routeName, reverseRoute, opts, true));
     }
@@ -810,8 +916,9 @@ const App = (() => {
         if (!rowIndex.has(normCode(route[j].code))) continue;
         const timed = bestTimedPair(train, route[i].code, route[j].code, opts.actualOnly);
         if (!timed) continue;
+        if (timed.minutes < MIN_TIME_MINUTES) continue;
         const speed = distance / (timed.minutes / 60);
-        if (!passesSpeedFilter(speed, opts.minSpeed, opts.maxSpeed, train)) continue;
+        if (!passesSpeedFilter(speed, opts.minSpeed, opts.maxSpeed, train, routeName)) continue;
         out.push(makeResult(train, routeName, route[i], route[j], distance, timed, speed, reversed));
         break;
       }
@@ -834,7 +941,7 @@ const App = (() => {
     const runs = [];
     let cur = [];
     for (const edge of edges) {
-      if (passesSpeedFilter(edge.speed, opts.minSpeed, opts.maxSpeed, train)) cur.push(edge);
+      if (passesSpeedFilter(edge.speed, opts.minSpeed, opts.maxSpeed, train, routeName)) cur.push(edge);
       else { if (cur.length >= 3) runs.push(cur); cur = []; }
     }
     if (cur.length >= 3) runs.push(cur);
@@ -849,8 +956,9 @@ const App = (() => {
         minutes: (last.timed.end.time.ms - first.timed.start.time.ms) / 60000
       };
       if (timed.minutes <= 0) return null;
+      if (timed.minutes < MIN_TIME_MINUTES) return null;
       const speed = distance / (timed.minutes / 60);
-      if (!passesSpeedFilter(speed, opts.minSpeed, opts.maxSpeed, train)) return null;
+      if (!passesSpeedFilter(speed, opts.minSpeed, opts.maxSpeed, train, routeName)) return null;
       const result = makeResult(train, routeName, route[first.i], route[last.i + 1], distance, timed, speed, reversed);
       result.note = `Korkean nopeuden jakso ${run.length} peräkkäisellä liikennepaikkavälillä.`;
       return result;
@@ -863,14 +971,16 @@ const App = (() => {
     return Number.isFinite(d) && d > 0 ? d : 0;
   }
 
-  function plausibleMaxForTrain(train) {
+  function plausibleMaxForTrain(train, routeName) {
     const type = String(train && train.trainType || '').trim().toUpperCase();
+    const route = String(routeName || '');
+    if (type === 'S' && route === 'Kerava–Hakosilta') return 225;
     return TRAIN_TYPE_PLAUSIBLE_MAX[type] || MAX_PLAUSIBLE_AVERAGE_SPEED;
   }
 
-  function passesSpeedFilter(speed, min, max, train) {
+  function passesSpeedFilter(speed, min, max, train, routeName) {
     if (!Number.isFinite(speed)) return false;
-    const plausibleMax = plausibleMaxForTrain(train);
+    const plausibleMax = plausibleMaxForTrain(train, routeName);
     if (speed > plausibleMax) return false;
     if (Number.isFinite(min) && speed < min) return false;
     if (Number.isFinite(max) && speed > max) return false;
@@ -881,7 +991,7 @@ const App = (() => {
     return {
       train, routeName, from, to, distance, timed, speed, reversed,
       key: `${routeName}|${normCode(from.code)}|${normCode(to.code)}`,
-      note: 'Keskinopeus laskettu yli 10 kilometrin matkalta.'
+      note: 'Keskinopeus laskettu yli 10 kilometrin ja vähintään 6 minuutin jaksolta.'
     };
   }
 
@@ -895,6 +1005,323 @@ const App = (() => {
       list.sort((a,b) => b.speed - a.speed);
       if (list.length >= 2 && list[0].speed > list[1].speed * 1.2) list[0].suspicious = true;
     }
+  }
+
+
+  function routeResultsFromTrains(trains, routeName, opts) {
+    return analyzeRoute(trains, routeName, opts);
+  }
+
+  async function runNationalSearch() {
+    els.nationalBtn.disabled = true;
+    els.nationalBtn.textContent = 'Haetaan…';
+    try {
+      clearResults();
+      const opts = readSearchOptions();
+      els.speedStatus.className = 'status';
+      els.speedStatus.textContent = 'Haetaan koko maan junatietoja…';
+      const trains = await fetchTrains(opts.date);
+      updateTrainTypesFromTrains(trains);
+      els.speedStatus.textContent = `Haettu ${trains.length} junaa. Lasketaan rataosien nopeimmat osumat…`;
+      const perRoute = [];
+      const detailsByRoute = new Map();
+      for (const routeName of getSortedRouteNames()) {
+        const routeOpts = { ...opts, routeName };
+        const results = routeResultsFromTrains(trains, routeName, routeOpts);
+        if (!results.length) continue;
+        results.sort((a,b) => b.speed - a.speed);
+        perRoute.push(results[0]);
+        detailsByRoute.set(routeName, results.slice(1, 11));
+      }
+      perRoute.sort((a,b) => b.speed - a.speed);
+      markSuspicious(perRoute);
+      const shown = perRoute.slice(0, opts.nationalLimit);
+      updateStats(perRoute, shown, 'Koko maa');
+      renderNationalResults(shown, detailsByRoute);
+      const capText = Number.isFinite(opts.maxSpeed) ? `${fmt(opts.minSpeed,0)}–${fmt(opts.maxSpeed,0)} km/h` : `vähintään ${fmt(opts.minSpeed,0)} km/h`;
+      els.speedStatus.textContent = `Koko maan haku: näytetään enintään ${opts.nationalLimit} nopeinta rataosakohtaista osumaa. Jokaiselta rataosalta näytetään ensin nopein juna; saman rataosan muut osumat saa auki +/Lisätiedot-kohdasta. Rajaus: ${capText}${opts.passengerOnly ? ', vain matkustajajunat' : ''}.`;
+    } catch (err) {
+      els.speedStatus.className = 'status error';
+      els.speedStatus.textContent = 'Koko maan haku epäonnistui: ' + (err && err.message ? err.message : String(err));
+    } finally {
+      els.nationalBtn.disabled = false;
+      els.nationalBtn.textContent = 'Hae koko maan nopeimmat';
+    }
+  }
+
+  function renderNationalResults(results, detailsByRoute) {
+    els.results.innerHTML = '';
+    if (!results.length) {
+      els.results.innerHTML = '<div class="result"><strong>Ei osumia.</strong><div class="muted">Kokeile pienempää vähimmäiskeskinopeutta tai poista rajauksia.</div></div>';
+      return;
+    }
+    for (const r of results) {
+      const div = document.createElement('div');
+      div.className = 'result';
+      const timeText = `${formatTimeWithSeconds(r.timed.start.time.ms)}–${formatTimeWithSeconds(r.timed.end.time.ms)} (${timeSourceText(r.timed)}), ajoaika ${formatDuration(r.timed.minutes)}`;
+      const more = detailsByRoute.get(r.routeName) || [];
+      const moreHtml = more.length ? `<details style="margin-top:10px;"><summary>+ Samalla rataosalla on ${more.length} muuta nopeaa osumaa</summary>${more.map(x => `<div class="small-note" style="margin-top:8px;">${escapeHtml(trainLabel(x.train))} · ${escapeHtml(x.from.name)}–${escapeHtml(x.to.name)} · <strong>${fmt(x.speed,1)} km/h</strong> · ${fmt(x.distance,3)} km · ${formatDuration(x.timed.minutes)}</div>`).join('')}</details>` : '';
+      div.innerHTML = `<div class="result-title">${escapeHtml(r.routeName)}: ${escapeHtml(r.from.name)}–${escapeHtml(r.to.name)}</div>
+        <div class="result-meta">${escapeHtml(trainLabel(r.train))} <span class="pill">${escapeHtml(r.train.trainType || '')}</span> · <strong>${fmt(r.speed,1)} km/h</strong> · ${fmt(r.distance,3)} km · ${timeText}</div>
+        <div class="muted">${escapeHtml(r.note || '')}</div>${moreHtml}`;
+      els.results.appendChild(div);
+    }
+  }
+
+  function dateRange(start, end) {
+    const out = [];
+    const s = new Date(start + 'T00:00:00');
+    const e = new Date(end + 'T00:00:00');
+    if (isNaN(s) || isNaN(e) || s > e) return out;
+    for (let d = s; d <= e; d = new Date(d.getTime() + 86400000)) out.push(new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10));
+    return out.slice(0, 31);
+  }
+
+
+  function updatePrintDirectionOptions() {
+    if (!els.printDirection || !els.printRouteSelect) return;
+    const routeName = els.printRouteSelect.value || '';
+    const route = routeData[routeName] || [];
+    els.printDirection.innerHTML = '';
+    if (!route.length) return;
+    const endpoints = routeNameEndpoints(routeName, route);
+    const opts = [
+      ['forward', `${endpoints.fromLabel} → ${endpoints.toLabel}`],
+      ['reverse', `${endpoints.toLabel} → ${endpoints.fromLabel}`]
+    ];
+    fillSelect(els.printDirection, opts);
+    const label = document.getElementById('printDirectionLabel');
+    if (label) label.textContent = `Kulkusuunta (${routeName})`;
+  }
+
+  function routeNameEndpoints(routeName, route) {
+    const parts = String(routeName || '').split('–').map(s => s.trim()).filter(Boolean);
+    const fromLabel = parts[0] || (route && route[0] ? route[0].name : 'Lähtö');
+    const toLabel = parts[1] || (route && route.length ? route[route.length - 1].name : 'Määrä');
+    return { fromLabel, toLabel };
+  }
+
+  function normalizedPlaceName(name) {
+    return String(name || '')
+      .toLowerCase()
+      .replace(/[()]/g, '')
+      .replace(/[-–—]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function endpointIndexForRouteName(route, endpointLabel, preferLast=false) {
+    if (!Array.isArray(route) || !route.length) return -1;
+    const target = normalizedPlaceName(endpointLabel);
+    const candidates = [];
+    route.forEach((place, idx) => {
+      const name = normalizedPlaceName(place.name);
+      let score = -1;
+      if (name === target) score = 100;
+      else if (name === `${target} asema`) score = 95;
+      else if (name.startsWith(`${target} asema `)) score = 90;
+      else if (name.startsWith(`${target} `)) score = 70;
+      else if (name.includes(` ${target} asema`)) score = 60;
+      if (score >= 0) {
+        // Pääasemaa suositaan tavara-, lajittelu- ja muiden teknisten osien yli.
+        if (/asema/.test(name)) score += 20;
+        if (/tavara|lajittelu|temu|arolampi|nokela|viinikka/.test(name)) score -= 30;
+        candidates.push({ idx, score });
+      }
+    });
+    if (!candidates.length) return -1;
+    candidates.sort((a,b) => b.score - a.score || (preferLast ? b.idx - a.idx : a.idx - b.idx));
+    return candidates[0].idx;
+  }
+
+  function routeForPrintedDirection(routeName, direction) {
+    const baseRoute = routeData[routeName] || [];
+    if (!baseRoute.length) return [];
+    const endpoints = routeNameEndpoints(routeName, baseRoute);
+    let a = endpointIndexForRouteName(baseRoute, endpoints.fromLabel, false);
+    let b = endpointIndexForRouteName(baseRoute, endpoints.toLabel, true);
+    if (a < 0) a = 0;
+    if (b < 0) b = baseRoute.length - 1;
+    let selected;
+    if (a <= b) selected = baseRoute.slice(a, b + 1);
+    else selected = baseRoute.slice(b, a + 1).reverse();
+    if (direction === 'reverse') selected = selected.slice().reverse();
+    return selected;
+  }
+
+  function applyPrintTypePreset(event) {
+    if (!els.printTrainType) return;
+    const source = event && event.target ? event.target.id : '';
+    if (source === 'printPassengerOnly' && els.printPassengerOnly.checked) {
+      if (els.printFreightOnly) els.printFreightOnly.checked = false;
+      restoreSelections(els.printTrainType, new Set(PASSENGER_TRAIN_TYPES));
+    } else if (source === 'printFreightOnly' && els.printFreightOnly.checked) {
+      if (els.printPassengerOnly) els.printPassengerOnly.checked = false;
+      restoreSelections(els.printTrainType, new Set(['T']));
+    } else if (source === 'printPassengerOnly' && !els.printPassengerOnly.checked) {
+      // Jätä käyttäjän nykyiset junatyyppivalinnat rauhaan, jos rajaus poistetaan.
+    } else if (source === 'printFreightOnly' && !els.printFreightOnly.checked) {
+      // Jätä käyttäjän nykyiset junatyyppivalinnat rauhaan, jos rajaus poistetaan.
+    }
+  }
+
+  async function buildPrintableList() {
+    els.buildPrintBtn.disabled = true;
+    els.buildPrintBtn.textContent = 'Laaditaan…';
+    try {
+      els.printTable.innerHTML = '';
+      const date = els.printStartDate.value;
+      if (!date) throw new Error('Valitse tulostettava päivä.');
+      const dates = [date];
+      const routeName = els.printRouteSelect.value;
+      const printDirection = els.printDirection ? els.printDirection.value : 'forward';
+      const route = routeForPrintedDirection(routeName, printDirection);
+      let wantedType = selectedValues(els.printTrainType);
+      const freightOnly = !!(els.printFreightOnly && els.printFreightOnly.checked);
+      if (freightOnly) wantedType = ['T'];
+      const useActual = !!(els.printActualTimes && els.printActualTimes.checked);
+      const columns = [];
+      els.printStatus.className = 'status';
+      els.printStatus.textContent = `Haetaan päivän ${formatFiDate(date)} junia…`;
+      for (const date of dates) {
+        const trains = await fetchTrains(date);
+        for (const train of trains) {
+          if (freightOnly && String(train.trainType || '').trim().toUpperCase() !== 'T') continue;
+          if (!trainMatchesType(train, wantedType, els.printPassengerOnly.checked)) continue;
+          const traversal = trainTraversalOnRoute(train, route, useActual);
+          if (!traversal) continue;
+          columns.push({ date, train, printDirection, ...traversal });
+        }
+      }
+      columns.sort((a,b) => a.startMs - b.startMs || Number(a.train.trainNumber)-Number(b.train.trainNumber));
+      els.printStatus.textContent = `Taulukossa ${columns.length} junaa. Junat on rajattu valitun kulkusuunnan ja valittujen junatyyppien mukaan. Paina Tulosta / tallenna PDF:nä.`;
+      renderTimetable(routeName, route, columns, useActual, date);
+    } catch (err) {
+      els.printStatus.className = 'status error';
+      els.printStatus.textContent = 'Tulostetaulukon laadinta epäonnistui: ' + (err && err.message ? err.message : String(err));
+    } finally {
+      els.buildPrintBtn.disabled = false;
+      els.buildPrintBtn.textContent = 'Laadi taulukko';
+    }
+  }
+
+  function trainTraversalOnRoute(train, route, useActual) {
+    if (!Array.isArray(route) || route.length < 2) return null;
+    const first = route[0], last = route[route.length - 1];
+    const chosen = timetablePairForPrint(train, first.code, last.code, useActual);
+    if (!chosen) return null;
+    const direction = 'selected';
+    const timesByCode = new Map();
+    const lo = Math.min(chosen.start.idx, chosen.end.idx);
+    const hi = Math.max(chosen.start.idx, chosen.end.idx);
+    for (const place of route) {
+      const hit = bestPrintRowForPlace(train, place.code, lo, hi, useActual, direction);
+      if (hit) timesByCode.set(normCode(place.code), hit);
+    }
+    return { direction, startMs: chosen.start.time.ms, endMs: chosen.end.time.ms, timesByCode };
+  }
+
+  function timetablePairForPrint(train, startCode, endCode, useActual) {
+    const starts = printRowsForCode(train, startCode, useActual);
+    const ends = printRowsForCode(train, endCode, useActual);
+    if (!starts.length || !ends.length) return null;
+    const candidates = [];
+    for (const s of starts) {
+      for (const e of ends) {
+        if (e.idx <= s.idx) continue;
+        if (e.time.ms <= s.time.ms) continue;
+        candidates.push({ start:s, end:e, minutes:(e.time.ms-s.time.ms)/60000 });
+      }
+    }
+    if (!candidates.length) return null;
+    candidates.sort((a,b) => a.start.idx-b.start.idx || a.end.idx-b.end.idx);
+    return candidates[0];
+  }
+
+  function printRowsForCode(train, code, useActual) {
+    const out = [];
+    for (const [idx, row] of (train.timeTableRows || []).entries()) {
+      if (normCode(row.stationShortCode) !== normCode(code)) continue;
+      const time = useActual ? rowTime(row, false) : scheduledRowTime(row);
+      if (!time || !Number.isFinite(time.ms)) continue;
+      out.push({ row, time, idx });
+    }
+    out.sort((a,b) => a.idx-b.idx || a.time.ms-b.time.ms);
+    return out;
+  }
+
+  function scheduledRowTime(row) {
+    if (!row || !row.scheduledTime) return null;
+    const ms = Date.parse(row.scheduledTime);
+    return Number.isFinite(ms) ? { ms, source:'aikataulu' } : null;
+  }
+
+  function bestPrintRowForPlace(train, code, lo, hi, useActual, direction) {
+    const rows = printRowsForCode(train, code, useActual).filter(r => r.idx >= lo && r.idx <= hi);
+    if (!rows.length) return null;
+
+    // Digitrafficissa ohittavallakin junalla voi olla sekä ARRIVAL- että DEPARTURE-rivi.
+    // Siksi trainStopping=false ohittaa ARRIVAL/DEPARTURE-parin tulkinnan pysähdykseksi.
+    const arrival = rows.find(r => String(r.row.type || '').toUpperCase() === 'ARRIVAL') || null;
+    const departure = rows.find(r => String(r.row.type || '').toUpperCase() === 'DEPARTURE') || null;
+    const hasArrival = !!arrival;
+    const hasDeparture = !!departure;
+    const hasExplicitStop = rows.some(r => r.row.trainStopping === true);
+    const hasExplicitPass = rows.some(r => r.row.trainStopping === false);
+    const isStop = hasExplicitStop || (!hasExplicitPass && hasArrival && hasDeparture);
+    const single = departure || arrival || rows[0];
+    return {
+      row: single.row,
+      time: single.time,
+      idx: single.idx,
+      arrival,
+      departure,
+      isPassThrough: !isStop
+    };
+  }
+
+  function printSelectedRows() {
+    window.print();
+  }
+
+  function renderTimetable(routeName, route, columns, useActual, date) {
+    const directionLabel = els.printDirection && els.printDirection.selectedOptions.length ? els.printDirection.selectedOptions[0].textContent : '';
+    const dateText = formatFiDate(date);
+    const title = `<h3>Tulostettava aikataulutaulukko: ${escapeHtml(routeName)}</h3><p>${escapeHtml(directionLabel)} · ${escapeHtml(dateText)}</p><p class="print-only">${useActual ? 'Toteutuneet/arvioidut ajat' : 'Aikataulunmukaiset ajat'} · ajat tasaminuutteina · ohitusajat sulkeissa · pysähtyvillä junilla tulo- ja lähtöaika · enintään 10 junaa sivulla</p>`;
+    if (!columns.length) {
+      els.printTable.innerHTML = `${title}<div class="result">Ei junia valituilla rajauksilla.</div>`;
+      return;
+    }
+    const trainsPerPage = 10;
+    const chunks = [];
+    for (let i = 0; i < columns.length; i += trainsPerPage) chunks.push(columns.slice(i, i + trainsPerPage));
+    const pages = chunks.map((chunk, pageIndex) => {
+      const head = `<thead><tr><th>Liikennepaikka</th>${chunk.map((c) => `<th><div class="train-head">${escapeHtml(trainLabel(c.train))}</div><div class="train-meta">${escapeHtml(formatFiDate(c.date))}</div></th>`).join('')}</tr></thead>`;
+      const rows = route.map((place, placeIndex) => {
+        const isFirstPlace = placeIndex === 0;
+        const isLastPlace = placeIndex === route.length - 1;
+        const cells = chunk.map((c) => {
+          const hit = c.timesByCode.get(normCode(place.code));
+          return `<td>${hit ? formatTimetableCell(hit, isFirstPlace, isLastPlace) : ''}</td>`;
+        }).join('');
+        return `<tr><td>${escapeHtml(place.name)} <span class="place-km">(${escapeHtml(place.code)}) · km ${escapeHtml(place.km || '')}</span></td>${cells}</tr>`;
+      }).join('');
+      const sub = chunks.length > 1 ? `<p class="small-note no-print">Taulukon osa ${pageIndex + 1}/${chunks.length}, junat ${pageIndex * trainsPerPage + 1}–${pageIndex * trainsPerPage + chunk.length}</p>` : '';
+      return `<div class="timetable-page">${sub}<div class="timetable-wrap"><table class="timetable">${head}<tbody>${rows}</tbody></table></div></div>`;
+    }).join('');
+    els.printTable.innerHTML = `${title}${pages}`;
+  }
+
+  function formatTimetableCell(hit, isFirstPlace, isLastPlace) {
+    if (!hit) return '';
+    const arr = hit.arrival && hit.arrival.time ? formatTime(hit.arrival.time.ms) : '';
+    const dep = hit.departure && hit.departure.time ? formatTime(hit.departure.time.ms) : '';
+    const single = hit.time ? formatTime(hit.time.ms) : '';
+    if (hit.isPassThrough) return single ? `(${escapeHtml(single)})` : '';
+    if (isFirstPlace) return escapeHtml(dep || arr || single);
+    if (isLastPlace) return escapeHtml(arr || dep || single);
+    if (arr && dep && arr !== dep) return `<div class="timepair"><div>${escapeHtml(arr)}</div><div>${escapeHtml(dep)}</div></div>`;
+    return escapeHtml(dep || arr || single);
   }
 
   async function runSearch() {
@@ -914,7 +1341,7 @@ const App = (() => {
       updateStats(all, limited, opts.routeName);
       renderResults(limited);
       const capText = Number.isFinite(opts.maxSpeed) ? `${fmt(opts.minSpeed,0)}–${fmt(opts.maxSpeed,0)} km/h` : `vähintään ${fmt(opts.minSpeed,0)} km/h`;
-      els.speedStatus.textContent = `Haettu ${trains.length} junaa. Nopeushaku rajattu rataosaan ${opts.routeName} ja keskinopeuksiin ${capText}. Näytetään enintään ${opts.limit} nopeinta osumaa. Laskenta käyttää ${opts.actualOnly ? 'vain toteutuneita aikoja' : 'toteutuneita, arvioituja tai aikataulun mukaisia aikoja'}. Selvästi junatyypille epärealistiset keskinopeudet jätetään pois; esimerkiksi T-junille käytetään 120 km/h turvarajaa.`;
+      els.speedStatus.textContent = `Haettu ${trains.length} junaa. Nopeushaku rajattu rataosaan ${opts.routeName} ja keskinopeuksiin ${capText}. Näytetään enintään ${opts.limit} nopeinta osumaa. Laskenta käyttää ${opts.actualOnly ? 'vain toteutuneita aikoja' : 'toteutuneita, arvioituja tai aikataulun mukaisia aikoja'}${opts.passengerOnly ? ', ja tuloksissa ovat vain aikataulunmukaiset matkustajajunat' : ''} ja yhdistää lyhyet aikavälit vähintään 6 minuutin laskentajaksoksi. Selvästi junatyypille epärealistiset keskinopeudet jätetään pois; esimerkiksi T-junille käytetään 120 km/h turvarajaa, IC-junille 205 km/h turvarajaa ja S-junille 205 km/h turvarajaa, paitsi Kerava–Hakosilta-rataosalla 225 km/h.`;
     } catch (err) {
       els.speedStatus.className = 'status error';
       els.speedStatus.textContent = 'Junatietojen haku epäonnistui: ' + (err && err.message ? err.message : String(err));
@@ -932,19 +1359,36 @@ const App = (() => {
       date: els.speedDate.value,
       minSpeed: Number.isFinite(minSpeed) ? minSpeed : 0,
       maxSpeed: Number.isFinite(maxSpeed) ? maxSpeed : NaN,
-      trainType: els.trainType.value,
+      trainType: [],
       limit: Math.max(1, Math.min(200, Number(els.resultLimit.value) || 10)),
+      nationalLimit: Math.max(1, Math.min(200, Number(els.nationalLimit.value) || 20)),
+      passengerOnly: !!els.passengerOnly.checked,
       actualOnly: els.actualOnly.checked,
       sustainedOnly: els.sustainedOnly.checked
     };
   }
 
   function updateTrainTypesFromTrains(trains) {
-    const current = els.trainType.value;
-    const types = ['Kaikki junatyypit'];
+    const currentSpeed = new Set(selectedValues(els.trainType));
+    const currentPrint = new Set(selectedValues(els.printTrainType));
+    const types = [...ALL_KNOWN_TRAIN_TYPES];
     for (const train of trains || []) if (train && train.trainType) types.push(train.trainType);
-    fillTrainTypes(types);
-    if (Array.from(els.trainType.options).some(o => o.value === current)) els.trainType.value = current;
+    const unique = Array.from(new Set(types.filter(Boolean))).sort((a,b) => a.localeCompare(b, 'fi', { sensitivity:'base' }));
+    fillTrainTypes(['Kaikki junatyypit', ...unique]);
+    fillSelect(els.printTrainType, unique.map(t => [t, t]));
+    restoreSelections(els.trainType, currentSpeed, ['Kaikki junatyypit']);
+    restoreSelections(els.printTrainType, currentPrint, Array.from(PASSENGER_TRAIN_TYPES));
+  }
+
+  function restoreSelections(select, wantedSet, defaults = []) {
+    if (!select) return;
+    const wanted = wantedSet && wantedSet.size ? wantedSet : new Set(defaults);
+    let any = false;
+    for (const option of Array.from(select.options || [])) {
+      option.selected = wanted.has(option.value);
+      if (option.selected) any = true;
+    }
+    if (!any && select.options.length) select.options[0].selected = true;
   }
 
   function clearResults() {
@@ -973,7 +1417,7 @@ const App = (() => {
       const dir = `${escapeHtml(r.from.name)}–${escapeHtml(r.to.name)}`;
       const flag = r.suspicious ? '<span class="bang" title="Yli 20 % nopeampi kuin toiseksi nopein samalla välillä">!</span>' : '';
       const title = `${flag}${escapeHtml(r.routeName)}: ${dir}`;
-      const timeText = `${formatTime(r.timed.start.time.ms)}–${formatTime(r.timed.end.time.ms)} (${timeSourceText(r.timed)})`;
+      const timeText = `${formatTimeWithSeconds(r.timed.start.time.ms)}–${formatTimeWithSeconds(r.timed.end.time.ms)} (${timeSourceText(r.timed)}), ajoaika ${formatDuration(r.timed.minutes)}`;
       div.innerHTML = `
         <div class="result-title">${title}</div>
         <div class="result-meta">${escapeHtml(trainLabel(r.train))} <span class="pill">${escapeHtml(r.train.trainType || '')}</span> · <strong>${fmt(r.speed,1)} km/h</strong> · ${fmt(r.distance,3)} km · ${timeText}</div>
@@ -1059,6 +1503,24 @@ const App = (() => {
 
   function formatTime(ms) {
     return new Date(ms).toLocaleTimeString('fi-FI', { hour:'2-digit', minute:'2-digit' }).replace(':','.');
+  }
+
+  function formatTimeWithSeconds(ms) {
+    return new Date(ms).toLocaleTimeString('fi-FI', { hour:'2-digit', minute:'2-digit', second:'2-digit' }).replace(/:/g,'.');
+  }
+
+  function formatFiDate(isoDate) {
+    const d = new Date(String(isoDate) + 'T12:00:00');
+    if (isNaN(d)) return String(isoDate || '');
+    const weekdays = ['Su','Ma','Ti','Ke','To','Pe','La'];
+    return `${weekdays[d.getDay()]} ${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+  }
+
+  function formatDuration(minutes) {
+    const totalSeconds = Math.max(0, Math.round(Number(minutes || 0) * 60));
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return s ? `${m} min ${String(s).padStart(2,'0')} s` : `${m} min`;
   }
 
   function escapeHtml(s) {
