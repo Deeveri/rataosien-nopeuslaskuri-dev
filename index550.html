@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suomen rataverkon aikataulu- ja nopeustyökalut</title>
+<script>
+(function(){
+  try {
+    const saved = localStorage.getItem('rnl_theme') || 'dark';
+    if (saved === 'light') document.documentElement.setAttribute('data-theme','light');
+    else if (saved === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme','dark');
+  } catch(_) { document.documentElement.setAttribute('data-theme','dark'); }
+})();
+</script>
+<style>
+  :root {
+    --bg:#0f1419; --panel:#1a2129; --panel2:#222c37; --text:#e8edf2; --dim:#9aa6b5;
+    --border:#2e3a48; --accent:#3ea6ff; --ok:#5fd4a0; --warn:#ffb454; --danger:#ff5b5b;
+    --shadow:rgba(0,0,0,.24);
+  }
+  html[data-theme="light"] {
+    --bg:#f4f6f8; --panel:#ffffff; --panel2:#eef1f4; --text:#1a2129; --dim:#5b6877;
+    --border:#d8dee4; --accent:#1d7fd6; --ok:#16885d; --warn:#9b6417; --danger:#d6364a;
+    --shadow:rgba(20,30,40,.10);
+  }
+  @media (prefers-color-scheme: light) {
+    html:not([data-theme]) {
+      --bg:#f4f6f8; --panel:#ffffff; --panel2:#eef1f4; --text:#1a2129; --dim:#5b6877;
+      --border:#d8dee4; --accent:#1d7fd6; --ok:#16885d; --warn:#9b6417; --danger:#d6364a;
+      --shadow:rgba(20,30,40,.10);
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); line-height:1.45; }
+  header { padding:22px 18px 16px; border-bottom:1px solid var(--border); background:linear-gradient(180deg,rgba(62,166,255,.10),transparent); }
+  .header-inner { max-width:940px; margin:0 auto; display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+  h1 { margin:0 0 6px; font-size:1.45rem; }
+  h2 { margin:0 0 12px; font-size:1.12rem; }
+  p { color:var(--dim); margin:.35rem 0; }
+  main { max-width:940px; margin:0 auto; padding:18px; }
+  .version { color:var(--dim); font-size:.86rem; margin-top:4px; }
+  .theme-toggle { display:flex; gap:4px; background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:4px; flex-shrink:0; }
+  .theme-toggle button { cursor:pointer; border:0; border-radius:8px; padding:7px 9px; background:transparent; color:var(--dim); font-weight:700; font-size:.82rem; }
+  .theme-toggle button.active { background:var(--accent); color:#06141f; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:16px; box-shadow:0 8px 24px var(--shadow); }
+  label { display:block; color:var(--dim); font-size:.86rem; margin:0 0 6px; }
+  select, input { width:100%; border:1px solid var(--border); border-radius:10px; background:var(--panel2); color:var(--text); padding:11px 12px; font-size:1rem; }
+  select[multiple] { min-height:8.5rem; padding:8px 10px; }
+  select[multiple] option { padding:4px 6px; }
+  input[type="checkbox"] { width:auto; transform:scale(1.15); margin-right:8px; }
+  .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+  .grid4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; align-items:end; }
+  .grid4 label { min-height:2.4em; display:flex; align-items:flex-end; }
+  .one { margin-bottom:12px; }
+  .checkrow { display:flex; align-items:flex-start; gap:6px; color:var(--dim); margin:10px 0; }
+  .btnrow { display:flex; justify-content:flex-end; margin:18px 0 6px; }
+  button.primary { cursor:pointer; border:0; border-radius:10px; background:var(--accent); color:#06141f; padding:12px 18px; font-weight:800; font-size:1rem; }
+  button.primary:disabled { opacity:.65; cursor:wait; }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:14px; }
+  .stat { background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:13px; }
+  .stat .label { color:var(--dim); font-size:.82rem; }
+  .stat .value { font-size:1.35rem; font-weight:800; margin-top:4px; }
+  .status { color:var(--dim); margin:12px 0 0; }
+  .status.error { color:var(--warn); }
+  .results { margin-top:14px; display:flex; flex-direction:column; gap:10px; }
+  .result { border:1px solid var(--border); border-radius:12px; background:var(--panel2); padding:12px; }
+  .result-title { font-weight:800; }
+  .result-meta { margin-top:3px; color:var(--text); }
+  .muted { color:var(--dim); }
+  .pill { display:inline-block; border:1px solid var(--border); border-radius:999px; padding:2px 8px; color:var(--dim); font-size:.82rem; margin-left:4px; }
+  .bang { color:var(--danger); font-weight:900; margin-right:6px; }
+  details { border:1px solid var(--border); border-radius:12px; background:var(--panel2); padding:10px 12px; }
+  details summary { cursor:pointer; font-weight:800; }
+  table { width:100%; border-collapse:collapse; margin-top:12px; font-size:.9rem; }
+  th,td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--border); vertical-align:top; }
+  th { color:var(--dim); font-weight:700; }
+  .cards3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:12px 0; }
+  .big { font-size:1.35rem; font-weight:800; }
+  .ok { color:var(--ok); }
+  .warn { color:var(--warn); }
+  .route-chain { margin-top:10px; line-height:1.7; }
+  .route-chain span { display:inline-block; }
+  .route-arrow { color:var(--dim); margin:0 4px; }
+  .form-hint { color:var(--dim); font-size:.84rem; margin-top:5px; }
+
+  .timetable-wrap { overflow-x:auto; margin-top:12px; border:1px solid #b8c0ca; border-radius:12px; background:#fff; color:#111; }
+  .timetable { min-width:900px; width:max-content; border-collapse:collapse; margin:0; font-size:.82rem; background:#fff; color:#111; }
+  .timetable th, .timetable td { border-right:1px solid #c9d1dc; border-bottom:1px solid #c9d1dc; padding:5px 6px; text-align:center; white-space:nowrap; color:#111; background:#fff; }
+  .timetable th:first-child, .timetable td:first-child { position:sticky; left:0; z-index:1; text-align:left; background:#f4f6f8; min-width:210px; }
+  .timetable thead th { position:sticky; top:0; z-index:2; background:#eef1f4; color:#111; }
+  .timetable thead th:first-child { z-index:3; background:#eef1f4; }
+  .timetable .train-head { font-weight:800; line-height:1.15; }
+  .timetable .train-meta { color:#4f5b68; font-size:.72rem; margin-top:2px; }
+  .timetable .train-route { color:#4f5b68; font-size:.72rem; font-style:italic; margin-top:2px; }
+  .timetable .place-km { color:#5d6875; font-size:.84em; }
+  .timetable .timepair { line-height:1.08; }
+  .timetable .timepair div + div { margin-top:1px; }
+  .timetable-page { margin-top:14px; }
+  .column-picker { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+  .column-picker label { display:inline-flex; align-items:center; gap:4px; border:1px solid var(--border); border-radius:999px; padding:5px 8px; background:var(--panel2); color:var(--text); margin:0; }
+  footer { max-width:940px; margin:0 auto; padding:4px 18px 32px; color:var(--dim); font-size:.82rem; text-align:center; }
+  a { color:var(--accent); }
+
+  .section-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+  .button-row { display:flex; gap:10px; flex-wrap:wrap; margin:12px 0; }
+  button.secondary { cursor:pointer; border:1px solid var(--border); border-radius:10px; background:var(--panel2); color:var(--text); padding:10px 14px; font-weight:800; font-size:.95rem; }
+  .small-note { font-size:.82rem; color:var(--dim); }
+  .print-only { display:none; }
+  @media print {
+    @page { size: A4 landscape; margin: 6mm; }
+    body { background:#fff !important; color:#000 !important; }
+    header, #speedCard, #networkCard, #distanceCard, footer, .no-print { display:none !important; }
+    #printCard { display:block !important; border:0; box-shadow:none; padding:0; margin:0; background:#fff !important; color:#000 !important; }
+    .print-only { display:block; }
+    .result, .card, .stat { background:#fff !important; color:#000 !important; border-color:#999; box-shadow:none; }
+    table { font-size:8pt; }
+    th,td { border-bottom:1px solid #aaa; color:#000 !important; }
+    .timetable-wrap { overflow:visible; border:0; background:#fff !important; color:#000 !important; }
+    .timetable-page { break-after:page; page-break-after:always; width:fit-content; max-width:100%; margin-left:auto; margin-right:auto; text-align:center; }
+    .timetable-page:last-child { break-after:auto; page-break-after:auto; }
+    .timetable { width:auto; min-width:0; font-size:7.2pt; table-layout:auto; background:#fff !important; color:#000 !important; margin-left:auto; margin-right:auto; }
+    .timetable-wrap { width:fit-content; max-width:100%; margin-left:auto; margin-right:auto; }
+    .timetable th, .timetable td { padding:2px 3px; background:#fff !important; color:#000 !important; border-color:#999; }
+    .timetable th:first-child, .timetable td:first-child, .timetable thead th { position:static; background:#fff !important; color:#000 !important; }
+    .timetable th:first-child, .timetable td:first-child { min-width:95px; max-width:150px; white-space:normal; }
+    .timetable .train-meta, .timetable .train-route, .timetable .place-km { color:#333 !important; }
+  }
+  @media (max-width:760px) {
+    .header-inner { flex-direction:column; }
+    .grid,.grid3,.grid4,.stats,.cards3 { grid-template-columns:1fr; }
+    .grid4 label { min-height:0; display:block; }
+    .btnrow { justify-content:stretch; }
+    button.primary { width:100%; }
+    table { font-size:.82rem; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div>
+      <h1>Suomen rataverkon aikataulu- ja nopeustyökalut</h1>
+      <p>Junien aikataulujen, rataosien keskinopeuksien, etäisyyksien ja reittien analysointiin.</p>
+      <div class="version">Kehitysversio 5.12</div>
+    </div>
+    <div class="theme-toggle" aria-label="Teema">
+      <button type="button" data-theme="dark">Tumma</button>
+      <button type="button" data-theme="light">Vaalea</button>
+      <button type="button" data-theme="auto">Auto</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="card" id="speedCard">
+    <h2>Nopeimmat junat rataosalla</h2>
+    <p>Hakee valitun päivän junat Fintrafficin/Digitrafficin rajapinnasta ja laskee keskinopeuden valitulla rataosalla todellisten välimatkojen perusteella.</p>
+    <p>Keskinopeus lasketaan vain riittävän pitkältä jaksolta. Sivun on löydettävä yli 10 kilometrin matka ja vähintään kuuden minuutin aikaväli. Jos rataosalla on tiheästi liikennepaikkoja tai aikaväli jää liian lyhyeksi, sivu yhdistää peräkkäisiä liikennepaikkavälejä pidemmäksi laskentajaksoksi. Tämä vähentää yhden minuutin aikataulutarkkuudesta johtuvia pyöristysvirheitä. Lisäksi selvästi junatyypille epärealistiset keskinopeudet jätetään pois.</p>
+
+    <div class="one">
+      <label for="speedRouteSelect">Rataosa nopeushaussa</label>
+      <select id="speedRouteSelect"></select>
+    </div>
+
+    <div class="grid3">
+      <div><label for="speedDate">Päivä</label><input type="date" id="speedDate"></div>
+      <div><label for="minSpeed">Vähimmäiskeskinopeus km/h</label><input type="number" id="minSpeed" value="110" min="0" step="1"></div>
+      <div><label for="maxSpeed">Enimmäiskeskinopeus km/h (valinnainen)</label><input type="number" id="maxSpeed" placeholder="Ei ylärajaa" min="0" step="1"></div>
+    </div>
+
+    <div class="grid">
+      <div class="one" style="margin-top:12px;">
+        <label for="resultLimit">Näytä enintään</label>
+        <input type="number" id="resultLimit" value="10" min="1" max="200" step="1">
+      </div>
+      <div class="one" style="margin-top:12px;">
+        <label for="nationalLimit">Koko maan listassa enintään</label>
+        <input type="number" id="nationalLimit" value="20" min="1" max="200" step="1">
+      </div>
+    </div>
+
+    <label class="checkrow"><input type="checkbox" id="passengerOnly"> <span>Listaa vain aikataulunmukaiset matkustajajunat</span></label>
+    <label class="checkrow"><input type="checkbox" id="actualOnly"> <span>Käytä vain toteutuneita ajoaikoja</span></label>
+    <label class="checkrow"><input type="checkbox" id="sustainedOnly"> <span>Listaa vain junat, joiden keskinopeus pysyy korkeana vähintään kolmella peräkkäisellä liikennepaikkavälillä</span></label>
+    <p class="muted">Tässä tilassa sivu etsii junalle pisimmän yhtenäisen korkean nopeuden jakson ja järjestää tulokset jakson keskinopeuden mukaan.</p>
+
+    <div class="button-row">
+      <button class="primary" id="searchBtn">Hae junat rataosalta</button>
+      <button class="secondary" id="nationalBtn">Hae koko maan nopeimmat</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="label">Löytyneitä junia</div><div class="value" id="statTrains">–</div></div>
+      <div class="stat"><div class="label">Rataosuuksia</div><div class="value" id="statSegments">–</div></div>
+      <div class="stat"><div class="label">Nopein keskinopeus</div><div class="value" id="statFastest">–</div></div>
+    </div>
+    <div class="status" id="speedStatus">Valitse rataosa tai Kaikki rataosuudet ja paina Hae junat.</div>
+    <div class="results" id="results"></div>
+  </section>
+
+
+  <section class="card" id="printCard">
+    <h2>Tulostettava aikataulutaulukko</h2>
+    <p>Laadi valitun rataosan yhden päivän aikataulutaulukko. Junat näkyvät pystysarakkeina ja liikennepaikat riveinä. Valitse myös kulkusuunta, jotta samaan taulukkoon ei tule molempiin suuntiin kulkevia junia. Oletuksena taulukko käyttää aikataulunmukaisia tasaminuuttiaikoja.</p>
+    <div class="grid4 no-print">
+      <div><label for="printStartDate">Päivä</label><input type="date" id="printStartDate"></div>
+      <input type="hidden" id="printEndDate">
+      <div><label for="printRouteSelect">Rataosa tulosteeseen</label><select id="printRouteSelect"></select></div>
+      <div><label for="printDirection" id="printDirectionLabel">Kulkusuunta</label><select id="printDirection"></select></div>
+      <div><label for="printTrainType">Junatyypit</label><select id="printTrainType" multiple size="5"></select></div>
+    </div>
+    <label class="checkrow no-print"><input type="checkbox" id="printPassengerOnly" checked> <span>Listaa vain aikataulunmukaiset matkustajajunat</span></label>
+    <label class="checkrow no-print"><input type="checkbox" id="printFreightOnly"> <span>Listaa vain aikataulunmukaiset tavarajunat</span></label>
+    <label class="checkrow no-print"><input type="checkbox" id="printActualTimes"> <span>Näytä toteutuneet tai arvioidut ajat, jos ne löytyvät</span></label>
+    <div class="button-row no-print">
+      <button class="primary" id="buildPrintBtn">Laadi taulukko</button>
+      <button class="secondary" id="printPdfBtn">Tulosta / tallenna PDF:nä</button>
+    </div>
+    <div class="status" id="printStatus">Laadi ensin taulukko.</div>
+    <div id="printTable"></div>
+  </section>
+
+  <section class="card" id="distanceCard">
+    <h2>Rataverkon reitti- ja etäisyyslaskuri</h2>
+    <p>Valitse lähtö- ja määräliikennepaikka. Halutessasi voit pakottaa reitin yhden tai useamman kauttakulkupaikan kautta. Laskenta käyttää rataverkosta muodostettua graafia ja PDF:n todellisia välimatkoja.</p>
+    <datalist id="placeDatalist"></datalist>
+    <div class="grid">
+      <div>
+        <label for="networkFromInput">Lähtöliikennepaikka</label>
+        <input id="networkFromInput" list="placeDatalist" placeholder="Kirjoita nimi tai lyhenne, esim. Helsinki tai HKI">
+      </div>
+      <div>
+        <label for="networkToInput">Määräliikennepaikka</label>
+        <input id="networkToInput" list="placeDatalist" placeholder="Kirjoita nimi tai lyhenne, esim. Oulu tai OL">
+      </div>
+    </div>
+    <div class="one" style="margin-top:12px;">
+      <label for="viaPlaces">Kauttakulkupaikka tai -paikat (valinnainen)</label>
+      <input id="viaPlaces" list="placeDatalist" placeholder="esim. Tampere asema, Orivesi, Haapamäki, Jyväskylä, Kuopio">
+      <div class="form-hint">Kirjoita nimet tai lyhenteet pilkulla erotettuina siinä järjestyksessä, jonka kautta haluat reitin kulkevan.</div>
+    </div>
+    <div class="btnrow"><button class="primary" id="networkRouteBtn">Laske reitti</button></div>
+    <div class="cards3">
+      <div class="stat"><div class="label">Reitin todellinen pituus</div><div class="value ok" id="networkDistance">–</div></div>
+      <div class="stat"><div class="label">Rataosajaksoja</div><div class="value" id="networkPlaceCount">–</div></div>
+      <div class="stat"><div class="label">Osamatkoja</div><div class="value" id="networkLegCount">–</div></div>
+    </div>
+    <div class="status" id="networkStatus">Valitse lähtö- ja määräliikennepaikka ja paina Laske reitti.</div>
+    <div class="results" id="networkResult"></div>
+  </section>
+
+  <section class="card" id="distanceRouteCard">
+    <h2>Rataosan liikennepaikkojen todelliset välimatkat</h2>
+    <p>Etäisyys lasketaan valitun yksittäisen rataosan liikennepaikkojen välillä.</p>
+    <div class="one"><label for="routeSelect">Rataosa välimatkalaskurissa</label><select id="routeSelect"></select></div>
+    <div class="grid">
+      <div><label for="fromSelect">Lähtöliikennepaikka</label><select id="fromSelect"></select></div>
+      <div><label for="toSelect">Määräliikennepaikka</label><select id="toSelect"></select></div>
+    </div>
+    <div class="cards3">
+      <div class="stat"><div class="label">Todellinen etäisyys</div><div class="value ok" id="trueDistance">–</div></div>
+      <div class="stat"><div class="label">Km-sijaintien erotus</div><div class="value" id="kmDistance">–</div></div>
+      <div class="stat"><div class="label">Ero</div><div class="value" id="distanceDiff">–</div></div>
+    </div>
+    <div class="status" id="distanceStatus"></div>
+    <details id="placesDetails">
+      <summary>Valitun rataosan liikennepaikat</summary>
+      <div id="routeTable"></div>
+    </details>
+  </section>
+</main>
+<footer>
+  Rataosien nopeuslaskuri · kehitysversio 5.12 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
+</footer>
+
+<script>
+'use strict';
+
+const ROUTES = {"Helsinki–Turku satama":[{"name":"Helsinki asema","code":"Hki","km":"0+159","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (HELSINKI)"},{"name":"Pasila asema","code":"Psl","km":"3+230","distanceFromPrevious":3.07,"cumulativeDistance":3.1,"type":"liikennepaikan osa (HELSINKI)"},{"name":"Ilmala asema","code":"Ila","km":"4+434","distanceFromPrevious":1.269,"cumulativeDistance":4.3,"type":"liikennepaikan osa (HELSINKI)"},{"name":"Helsinki Kivihaka","code":"Khk","km":"4+701","distanceFromPrevious":0.267,"cumulativeDistance":4.6,"type":"liikennepaikan osa (HELSINKI)"},{"name":"Huopalahti","code":"Hpl","km":"6+375","distanceFromPrevious":1.646,"cumulativeDistance":6.3,"type":"liikennepaikka"},{"name":"Valimo","code":"Vmo","km":"7+480","distanceFromPrevious":1.11,"cumulativeDistance":7.4,"type":"seisake"},{"name":"Pitäjänmäki","code":"Pjm","km":"8+474","distanceFromPrevious":0.924,"cumulativeDistance":8.3,"type":"seisake"},{"name":"Mäkkylä","code":"Mäk","km":"9+511","distanceFromPrevious":1.029,"cumulativeDistance":9.3,"type":"seisake"},{"name":"Leppävaara","code":"Lpv","km":"11+249","distanceFromPrevious":1.726,"cumulativeDistance":11.0,"type":"liikennepaikka"},{"name":"Kilo","code":"Kil","km":"13+035","distanceFromPrevious":1.735,"cumulativeDistance":12.8,"type":"seisake"},{"name":"Kera","code":"Kea","km":"14+536","distanceFromPrevious":1.508,"cumulativeDistance":14.3,"type":"seisake"},{"name":"Kauniainen","code":"Kni","km":"16+054","distanceFromPrevious":1.498,"cumulativeDistance":15.8,"type":"liikennepaikka"},{"name":"Koivuhovi","code":"Kvh","km":"17+861","distanceFromPrevious":1.808,"cumulativeDistance":17.6,"type":"seisake"},{"name":"Tuomarila","code":"Trl","km":"19+022","distanceFromPrevious":1.087,"cumulativeDistance":18.7,"type":"seisake"},{"name":"Espoo","code":"Epo","km":"20+600","distanceFromPrevious":1.514,"cumulativeDistance":20.2,"type":"liikennepaikka"},{"name":"Kauklahti","code":"Klh","km":"24+277","distanceFromPrevious":3.619,"cumulativeDistance":23.8,"type":"liikennepaikka"},{"name":"Masala","code":"Mas","km":"29+561","distanceFromPrevious":5.177,"cumulativeDistance":29.0,"type":"seisake"},{"name":"Vasikkahaka","code":"Vkh","km":"31+175","distanceFromPrevious":1.613,"cumulativeDistance":30.6,"type":"liikennepaikka"},{"name":"Jorvas","code":"Jrs","km":"32+322","distanceFromPrevious":1.147,"cumulativeDistance":31.7,"type":"seisake"},{"name":"Heikkilä","code":"Hek","km":"34+856","distanceFromPrevious":2.532,"cumulativeDistance":34.3,"type":"liikennepaikka"},{"name":"Tolsa","code":"Tol","km":"35+454","distanceFromPrevious":0.589,"cumulativeDistance":34.9,"type":"seisake"},{"name":"Kirkkonummi","code":"Kkn","km":"37+503","distanceFromPrevious":2.022,"cumulativeDistance":36.9,"type":"liikennepaikka"},{"name":"Siuntio","code":"Sti","km":"51+285","distanceFromPrevious":13.774,"cumulativeDistance":50.7,"type":"liikennepaikka"},{"name":"Inkoo","code":"Iko","km":"70+620","distanceFromPrevious":18.81,"cumulativeDistance":69.5,"type":"liikennepaikka"},{"name":"Karjaa","code":"Kr","km":"87+056","distanceFromPrevious":16.259,"cumulativeDistance":85.7,"type":"liikennepaikka"},{"name":"Pohjankuru","code":"Pku","km":"94+907","distanceFromPrevious":7.851,"cumulativeDistance":93.6,"type":"liikennepaikka"},{"name":"Ervelä","code":"Erv","km":"119+816","distanceFromPrevious":22.494,"cumulativeDistance":116.1,"type":"liikennepaikka"},{"name":"Salo","code":"Slo","km":"143+981","distanceFromPrevious":22.785,"cumulativeDistance":138.9,"type":"liikennepaikka"},{"name":"Paimio","code":"Po","km":"171+885","distanceFromPrevious":26.432,"cumulativeDistance":165.3,"type":"liikennepaikka"},{"name":"Piikkiö","code":"Pik","km":"182+785","distanceFromPrevious":10.858,"cumulativeDistance":176.2,"type":"liikennepaikka"},{"name":"Kupittaa","code":"Kut","km":"196+372","distanceFromPrevious":13.533,"cumulativeDistance":189.7,"type":"liikennepaikan osa (TURKU)"},{"name":"Turku asema","code":"Tku","km":"199+674","distanceFromPrevious":3.297,"cumulativeDistance":193.0,"type":"liikennepaikan osa (TURKU)"},{"name":"Turku tavara","code":"Tkut","km":"200+460","distanceFromPrevious":0.783,"cumulativeDistance":193.8,"type":"liikennepaikan osa (TURKU)"},{"name":"Turku satama","code":"Tus","km":"202+510","distanceFromPrevious":2.833,"cumulativeDistance":195.8,"type":"liikennepaikan osa (TURKU)"}],"Huopalahti–Havukoski":[{"name":"Huopalahti","code":"Hpl","km":"6+375","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Pohjois-Haaga","code":"Poh","km":"8+050","distanceFromPrevious":1.698,"cumulativeDistance":1.7,"type":"seisake"},{"name":"Kannelmäki","code":"Kan","km":"9+300","distanceFromPrevious":1.245,"cumulativeDistance":2.9,"type":"liikennepaikka"},{"name":"Malminkartano","code":"Mlo","km":"10+730","distanceFromPrevious":1.431,"cumulativeDistance":4.4,"type":"seisake"},{"name":"Myyrmäki","code":"Myr","km":"12+130","distanceFromPrevious":1.402,"cumulativeDistance":5.8,"type":"liikennepaikka"},{"name":"Louhela","code":"Loh","km":"13+190","distanceFromPrevious":1.058,"cumulativeDistance":6.8,"type":"seisake"},{"name":"Martinlaakso","code":"Mrl","km":"14+010","distanceFromPrevious":0.82,"cumulativeDistance":7.7,"type":"seisake"},{"name":"Laajavuori","code":"Lav","km":"14+527","distanceFromPrevious":0.517,"cumulativeDistance":8.2,"type":"liikennepaikka"},{"name":"Vantaankoski","code":"Vks","km":"14+961","distanceFromPrevious":0.434,"cumulativeDistance":8.6,"type":"seisake"},{"name":"Vehkala","code":"Veh","km":"15+997","distanceFromPrevious":1.03,"cumulativeDistance":9.6,"type":"seisake"},{"name":"Kivistö","code":"Ktö","km":"18+279","distanceFromPrevious":2.282,"cumulativeDistance":11.9,"type":"seisake"},{"name":"Ruusumäki","code":"Rsm","km":"20+282","distanceFromPrevious":2.003,"cumulativeDistance":13.9,"type":"liikennepaikka"},{"name":"Aviapolis","code":"Avp","km":"25+135","distanceFromPrevious":4.865,"cumulativeDistance":18.8,"type":"seisake"},{"name":"Virkamies","code":"Vms","km":"25+931","distanceFromPrevious":0.796,"cumulativeDistance":19.6,"type":"liikennepaikka"},{"name":"Lentoasema","code":"Len","km":"26+575","distanceFromPrevious":0.644,"cumulativeDistance":20.2,"type":"seisake"},{"name":"Leinelä","code":"Lnä","km":"31+123","distanceFromPrevious":4.547,"cumulativeDistance":24.8,"type":"seisake"},{"name":"Asola","code":"Aso","km":"31+596","distanceFromPrevious":0.473,"cumulativeDistance":25.2,"type":"liikennepaikka"},{"name":"Havukoski","code":"Hvk","km":"33+250","distanceFromPrevious":1.654,"cumulativeDistance":26.9,"type":"liikennepaikan osa (TIKKURILA)"}],"Hyvinkää–Karjaa":[{"name":"Hyvinkää Paavola","code":"Pvl","km":"61+140","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (HYVINKÄÄ)"},{"name":"Hyvinkää tavara","code":"Hyt","km":"60+179","distanceFromPrevious":3.137,"cumulativeDistance":3.1,"type":"liikennepaikan osa (HYVINKÄÄ)"},{"name":"Rajamäki","code":"Rm","km":"72+267","distanceFromPrevious":12.098,"cumulativeDistance":15.2,"type":"liikennepaikka"},{"name":"Nummela","code":"Nm","km":"109+368","distanceFromPrevious":37.126,"cumulativeDistance":52.4,"type":"liikennepaikka"},{"name":"Lohja","code":"Lo","km":"122+965","distanceFromPrevious":13.606,"cumulativeDistance":66.0,"type":"liikennepaikka"},{"name":"Kirkniemi","code":"Krn","km":"136+261","distanceFromPrevious":13.293,"cumulativeDistance":79.3,"type":"liikennepaikka"},{"name":"Mustio","code":"Mso","km":"143+000","distanceFromPrevious":6.745,"cumulativeDistance":86.0,"type":"linjavaihde"},{"name":"Karjaa","code":"Kr","km":"157+817","distanceFromPrevious":14.821,"cumulativeDistance":100.8,"type":"liikennepaikka"}],"Karjaa–Hanko":[{"name":"Karjaa","code":"Kr","km":"157+817","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Dragsvik","code":"Dra","km":"171+180","distanceFromPrevious":13.366,"cumulativeDistance":13.4,"type":"liikennepaikka"},{"name":"Tammisaari","code":"Tms","km":"174+056","distanceFromPrevious":2.874,"cumulativeDistance":16.2,"type":"seisake"},{"name":"Skogby","code":"Sgy","km":"184+680","distanceFromPrevious":10.645,"cumulativeDistance":26.9,"type":"seisake"},{"name":"Lappohja","code":"Lpo","km":"189+639","distanceFromPrevious":4.964,"cumulativeDistance":31.8,"type":"liikennepaikka"},{"name":"Santala","code":"Sta","km":"196+908","distanceFromPrevious":7.275,"cumulativeDistance":39.1,"type":"seisake"},{"name":"Dynamiittivaihde","code":"Dmv","km":"199+185","distanceFromPrevious":2.28,"cumulativeDistance":41.4,"type":"linjavaihde"},{"name":"Hanko-Pohjoinen","code":"Hkp","km":"205+935","distanceFromPrevious":6.755,"cumulativeDistance":48.2,"type":"liikennepaikan osa (HANKO)"},{"name":"Hanko tavara","code":"Hnkt","km":"206+350","distanceFromPrevious":0.411,"cumulativeDistance":48.6,"type":"liikennepaikan osa (HANKO)"},{"name":"Hanko asema","code":"Hnk","km":"207+119","distanceFromPrevious":0.773,"cumulativeDistance":49.3,"type":"liikennepaikan osa (HANKO)"}],"Turku–Uusikaupunki":[{"name":"Turku asema","code":"Tku","km":"199+674","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (TURKU)"},{"name":"Turku tavara","code":"Tkut","km":"200+460","distanceFromPrevious":0.783,"cumulativeDistance":0.8,"type":"liikennepaikan osa (TURKU)"},{"name":"Raisio","code":"Rai","km":"207+829","distanceFromPrevious":7.39,"cumulativeDistance":8.2,"type":"liikennepaikka"},{"name":"Mynämäki","code":"Myn","km":"229+607","distanceFromPrevious":21.8,"cumulativeDistance":30.0,"type":"liikennepaikka"},{"name":"Uusikaupunki","code":"Ukp","km":"264+795","distanceFromPrevious":35.162,"cumulativeDistance":65.1,"type":"liikennepaikka"}],"Uusikaupunki–Hangonsaari":[{"name":"Uusikaupunki","code":"Ukp","km":"264+795","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Hangonsaari","code":"Hgs","km":"268+680","distanceFromPrevious":3.88,"cumulativeDistance":3.9,"type":"liikennepaikka"}],"Raisio–Naantali":[{"name":"Raisio","code":"Rai","km":"207+829","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Naantali","code":"Nnl","km":"213+193","distanceFromPrevious":5.357,"cumulativeDistance":5.4,"type":"liikennepaikka"}],"Helsinki–Riihimäki":[{"name":"Helsinki asema","code":"Hki","km":"0+159","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (HELSINKI)"},{"name":"Pasila asema","code":"Psl","km":"3+230","distanceFromPrevious":3.071,"cumulativeDistance":3.1,"type":"liikennepaikan osa (HELSINKI)"},{"name":"Pasila autojuna-asema","code":"Pau","km":"4+319","distanceFromPrevious":1.091,"cumulativeDistance":4.2,"type":"liikennepaikan osa (HELSINKI)"},{"name":"Pasila tavara","code":"Pslt","km":"4+748","distanceFromPrevious":0.429,"cumulativeDistance":4.6,"type":"liikennepaikan osa (HELSINKI)"},{"name":"Käpylä","code":"Käp","km":"5+840","distanceFromPrevious":null,"cumulativeDistance":null,"type":"liikennepaikan osa (HELSINKI)"},{"name":"Oulunkylä","code":"Olk","km":"7+399","distanceFromPrevious":1.56,"cumulativeDistance":7.2,"type":"liikennepaikan osa (HELSINKI)"},{"name":"Pukinmäki","code":"Pmk","km":"9+442","distanceFromPrevious":2.044,"cumulativeDistance":9.3,"type":"seisake"},{"name":"Malmi","code":"Ml","km":"10+900","distanceFromPrevious":1.458,"cumulativeDistance":10.7,"type":"liikennepaikka"},{"name":"Tapanila","code":"Tna","km":"12+610","distanceFromPrevious":1.711,"cumulativeDistance":12.5,"type":"seisake"},{"name":"Puistola","code":"Pla","km":"14+050","distanceFromPrevious":1.435,"cumulativeDistance":13.9,"type":"seisake"},{"name":"Tikkurila asema","code":"Tkl","km":"15+861","distanceFromPrevious":1.812,"cumulativeDistance":15.7,"type":"liikennepaikan osa (TIKKURILA)"},{"name":"Hiekkaharju","code":"Hkh","km":"17+109","distanceFromPrevious":1.249,"cumulativeDistance":17.0,"type":"liikennepaikan osa (TIKKURILA)"},{"name":"Havukoski","code":"Hvk","km":"17+725","distanceFromPrevious":0.616,"cumulativeDistance":17.6,"type":"liikennepaikan osa (TIKKURILA)"},{"name":"Koivukylä","code":"Kvy","km":"19+440","distanceFromPrevious":1.716,"cumulativeDistance":19.3,"type":"seisake"},{"name":"Rekola","code":"Rkl","km":"20+615","distanceFromPrevious":1.175,"cumulativeDistance":20.5,"type":"seisake"},{"name":"Hanala","code":"Hna","km":"21+394","distanceFromPrevious":0.778,"cumulativeDistance":21.2,"type":"liikennepaikka"},{"name":"Korso","code":"Krs","km":"22+740","distanceFromPrevious":1.346,"cumulativeDistance":22.6,"type":"seisake"},{"name":"Savio","code":"Sav","km":"26+265","distanceFromPrevious":3.526,"cumulativeDistance":26.1,"type":"seisake"},{"name":"Kerava asema","code":"Ke","km":"28+869","distanceFromPrevious":2.603,"cumulativeDistance":28.7,"type":"liikennepaikan osa (KERAVA)"},{"name":"Kytömaa","code":"Kyt","km":"31+274","distanceFromPrevious":2.406,"cumulativeDistance":31.1,"type":"liikennepaikan osa (KERAVA)"},{"name":"Ainola","code":"Ain","km":"34+784","distanceFromPrevious":3.511,"cumulativeDistance":34.6,"type":"seisake"},{"name":"Järvenpää asema","code":"Jp","km":"36+786","distanceFromPrevious":2.002,"cumulativeDistance":36.6,"type":"liikennepaikan osa (JÄRVENPÄÄ)"},{"name":"Saunakallio","code":"Sau","km":"38+846","distanceFromPrevious":2.057,"cumulativeDistance":38.7,"type":"liikennepaikan osa (JÄRVENPÄÄ)"},{"name":"Purola","code":"Pur","km":"40+533","distanceFromPrevious":1.689,"cumulativeDistance":40.4,"type":"liikennepaikan osa (JÄRVENPÄÄ)"},{"name":"Jokela","code":"Jk","km":"47+937","distanceFromPrevious":7.406,"cumulativeDistance":47.8,"type":"liikennepaikka"},{"name":"Palopuro","code":"Plp","km":"54+535","distanceFromPrevious":6.598,"cumulativeDistance":54.4,"type":"liikennepaikka"},{"name":"Hyvinkää","code":"Hy","km":"58+792","distanceFromPrevious":4.255,"cumulativeDistance":58.6,"type":"liikennepaikka"},{"name":"Riihimäki Arolampi","code":"Arp","km":"66+600","distanceFromPrevious":7.811,"cumulativeDistance":66.4,"type":"liikennepaikan osa (RIIHIMÄKI)"},{"name":"Riihimäki tavara","code":"Rit","km":"68+773","distanceFromPrevious":2.174,"cumulativeDistance":68.6,"type":"liikennepaikan osa (RIIHIMÄKI)"},{"name":"Riihimäki lajittelu","code":"Rila","km":"70+068","distanceFromPrevious":1.295,"cumulativeDistance":69.9,"type":"liikennepaikan osa (RIIHIMÄKI)"},{"name":"Riihimäki asema","code":"Ri","km":"71+410","distanceFromPrevious":1.339,"cumulativeDistance":71.3,"type":"liikennepaikan osa (RIIHIMÄKI)"}],"Kerava–Hakosilta":[{"name":"Kerava asema","code":"Ke","km":"28+869","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (KERAVA)"},{"name":"Kytömaa","code":"Kyt","km":"31+274","distanceFromPrevious":2.406,"cumulativeDistance":2.4,"type":"liikennepaikan osa (KERAVA)"},{"name":"Haarajoki","code":"Haa","km":"39+567","distanceFromPrevious":8.296,"cumulativeDistance":10.7,"type":"liikennepaikka"},{"name":"Korvensuo","code":"Ksu","km":"50+500","distanceFromPrevious":10.933,"cumulativeDistance":21.6,"type":"liikennepaikka"},{"name":"Mäntsälä","code":"Mlä","km":"59+210","distanceFromPrevious":8.71,"cumulativeDistance":30.3,"type":"liikennepaikka"},{"name":"Sipilä","code":"Sip","km":"68+697","distanceFromPrevious":9.487,"cumulativeDistance":39.8,"type":"liikennepaikka"},{"name":"Henna","code":"Hnn","km":"79+373","distanceFromPrevious":10.676,"cumulativeDistance":50.5,"type":"liikennepaikka"},{"name":"Hakosilta","code":"Hlt","km":"93+735","distanceFromPrevious":14.362,"cumulativeDistance":64.9,"type":"liikennepaikka"}],"Kerava–Sköldvik":[{"name":"Kytömaa","code":"Kyt","km":"31+274","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (KERAVA)"},{"name":"Nikkilä","code":"Nlä","km":"39+176","distanceFromPrevious":11.387,"cumulativeDistance":11.4,"type":"seisake"},{"name":"Olli","code":"Olli","km":"45+734","distanceFromPrevious":6.553,"cumulativeDistance":17.9,"type":"linjavaihde"},{"name":"Sköldvik","code":"Sld","km":"56+360","distanceFromPrevious":10.627,"cumulativeDistance":28.6,"type":"liikennepaikka"}],"Kerava–Vuosaari":[{"name":"Kerava asema","code":"Ke","km":"28+869","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (KERAVA)"},{"name":"Vuosaari","code":"Vsa","km":"50+184","distanceFromPrevious":21.319,"cumulativeDistance":21.3,"type":"liikennepaikka"}],"Olli–Porvoo (museorata)":[{"name":"Olli","code":"Olli","km":"45+734","distanceFromPrevious":null,"cumulativeDistance":0,"type":"linjavaihde"},{"name":"Hinthaara","code":"Hh","km":"52+150","distanceFromPrevious":6.406,"cumulativeDistance":6.4,"type":"seisake"},{"name":"Haksi","code":"Hsi","km":"56+737","distanceFromPrevious":4.605,"cumulativeDistance":11.0,"type":"seisake"},{"name":"Kiiala","code":"Kia","km":"60+013","distanceFromPrevious":3.239,"cumulativeDistance":14.3,"type":"seisake"},{"name":"Porvoo","code":"Prv","km":"62+287","distanceFromPrevious":2.26,"cumulativeDistance":16.5,"type":"liikennepaikka"}],"Riihimäki–Tampere":[{"name":"Riihimäki tavara","code":"Rit","km":"68+773","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (RIIHIMÄKI)"},{"name":"Riihimäki lajittelu","code":"Rila","km":"70+068","distanceFromPrevious":1.295,"cumulativeDistance":1.3,"type":"liikennepaikan osa (RIIHIMÄKI)"},{"name":"Riihimäki asema","code":"Ri","km":"71+410","distanceFromPrevious":1.339,"cumulativeDistance":2.6,"type":"liikennepaikan osa (RIIHIMÄKI)"},{"name":"Sammalisto","code":"Sam","km":"74+487","distanceFromPrevious":3.088,"cumulativeDistance":5.7,"type":"liikennepaikka"},{"name":"Ryttylä","code":"Ry","km":"80+770","distanceFromPrevious":6.287,"cumulativeDistance":12.0,"type":"liikennepaikka"},{"name":"Leppäkoski","code":"Lk","km":"87+830","distanceFromPrevious":7.066,"cumulativeDistance":19.1,"type":"liikennepaikka"},{"name":"Turenki","code":"Tu","km":"93+771","distanceFromPrevious":5.947,"cumulativeDistance":25.0,"type":"liikennepaikka"},{"name":"Harviala","code":"Hrv","km":"99+456","distanceFromPrevious":5.685,"cumulativeDistance":30.7,"type":"liikennepaikka"},{"name":"Hämeenlinna","code":"Hl","km":"107+559","distanceFromPrevious":8.111,"cumulativeDistance":38.8,"type":"liikennepaikka"},{"name":"Parola","code":"Prl","km":"115+764","distanceFromPrevious":8.209,"cumulativeDistance":47.0,"type":"liikennepaikka"},{"name":"Leteensuo","code":"Lts","km":"123+554","distanceFromPrevious":7.771,"cumulativeDistance":54.8,"type":"liikennepaikka"},{"name":"Iittala","code":"Ita","km":"129+286","distanceFromPrevious":5.735,"cumulativeDistance":60.5,"type":"seisake"},{"name":"Vinnilä","code":"Vin","km":"131+243","distanceFromPrevious":1.958,"cumulativeDistance":62.5,"type":"liikennepaikka"},{"name":"Kuurila","code":"Ku","km":"138+769","distanceFromPrevious":7.529,"cumulativeDistance":70.0,"type":"liikennepaikka"},{"name":"Toijala","code":"Tl","km":"147+339","distanceFromPrevious":8.567,"cumulativeDistance":78.6,"type":"liikennepaikka"},{"name":"Viiala","code":"Via","km":"154+288","distanceFromPrevious":6.959,"cumulativeDistance":85.5,"type":"liikennepaikka"},{"name":"Mattila","code":"Mat","km":"159+906","distanceFromPrevious":5.61,"cumulativeDistance":91.2,"type":"liikennepaikka"},{"name":"Lempäälä","code":"Lpä","km":"165+928","distanceFromPrevious":6.023,"cumulativeDistance":97.2,"type":"liikennepaikka"},{"name":"Vanattara","code":"Vtr","km":"172+340","distanceFromPrevious":6.339,"cumulativeDistance":103.5,"type":"liikennepaikka"},{"name":"Sääksjärvi","code":"Sj","km":"177+734","distanceFromPrevious":5.381,"cumulativeDistance":108.9,"type":"liikennepaikka"},{"name":"Tampere tavara","code":"Tpet","km":"184+100","distanceFromPrevious":6.251,"cumulativeDistance":115.2,"type":"liikennepaikan osa (TAMPERE)"},{"name":"Tampere Viinikka","code":"Vka","km":"185+400","distanceFromPrevious":1.279,"cumulativeDistance":116.4,"type":"liikennepaikan osa (TAMPERE)"},{"name":"Tampere asema","code":"Tpe","km":"187+389","distanceFromPrevious":1.99,"cumulativeDistance":118.4,"type":"liikennepaikan osa (TAMPERE)"},{"name":"Tampere Viinikka","code":"Vka","km":"185+400","distanceFromPrevious":null,"cumulativeDistance":null,"type":"liikennepaikan osa (TAMPERE)"},{"name":"Tampere Järvensivu","code":"Jvs","km":"187+814","distanceFromPrevious":1.631,"cumulativeDistance":1.6,"type":"liikennepaikan osa (TAMPERE)"}],"Toijala–Turku":[{"name":"Toijala","code":"Tl","km":"147+339","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Urjala","code":"Ur","km":"165+588","distanceFromPrevious":20.423,"cumulativeDistance":20.4,"type":"liikennepaikka"},{"name":"Humppila","code":"Hp","km":"188+778","distanceFromPrevious":23.206,"cumulativeDistance":43.6,"type":"liikennepaikka"},{"name":"Loimaa","code":"Lm","km":"208+870","distanceFromPrevious":20.108,"cumulativeDistance":63.7,"type":"liikennepaikka"},{"name":"Kyrö","code":"Kö","km":"232+875","distanceFromPrevious":24.021,"cumulativeDistance":87.8,"type":"liikennepaikka"},{"name":"Karviainen","code":"Kar","km":"247+320","distanceFromPrevious":14.449,"cumulativeDistance":102.2,"type":"liikennepaikka"},{"name":"Maaria","code":"Mri","km":"262+070","distanceFromPrevious":14.764,"cumulativeDistance":117.0,"type":"liikennepaikka"},{"name":"Turku asema","code":"Tku","km":"274+860","distanceFromPrevious":12.69,"cumulativeDistance":129.7,"type":"liikennepaikan osa (TURKU)"},{"name":"Turku tavara","code":"Tkut","km":"200+460","distanceFromPrevious":0.783,"cumulativeDistance":130.4,"type":"liikennepaikan osa (TURKU)"},{"name":"Turku satama","code":"Tus","km":"202+510","distanceFromPrevious":2.833,"cumulativeDistance":132.5,"type":"liikennepaikan osa (TURKU)"}],"Toijala–Valkeakoski":[{"name":"Toijala","code":"Tl","km":"147+339","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Ilola","code":"Ioa","km":"155+102","distanceFromPrevious":7.773,"cumulativeDistance":7.8,"type":"seisake"},{"name":"Metsäkansa","code":"Msä","km":"155+811","distanceFromPrevious":0.709,"cumulativeDistance":8.5,"type":"linjavaihde"},{"name":"Valkeakoski","code":"Vi","km":"164+952","distanceFromPrevious":9.142,"cumulativeDistance":17.6,"type":"liikennepaikka"}],"Tampere–Seinäjoki":[{"name":"Tampere tavara","code":"Tpet","km":"184+100","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (TAMPERE)"},{"name":"Tampere Viinikka","code":"Vka","km":"185+400","distanceFromPrevious":1.279,"cumulativeDistance":1.3,"type":"liikennepaikan osa (TAMPERE)"},{"name":"Tampere asema","code":"Tpe","km":"187+389","distanceFromPrevious":1.99,"cumulativeDistance":3.3,"type":"liikennepaikan osa (TAMPERE)"},{"name":"Lielahti","code":"Llh","km":"193+393","distanceFromPrevious":5.973,"cumulativeDistance":9.2,"type":"liikennepaikka"},{"name":"Ylöjärvi","code":"Ylö","km":"200+753","distanceFromPrevious":7.373,"cumulativeDistance":16.6,"type":"liikennepaikka"},{"name":"Lakiala","code":"Lak","km":"209+214","distanceFromPrevious":8.459,"cumulativeDistance":25.1,"type":"liikennepaikka"},{"name":"Majajärvi","code":"Mjj","km":"216+317","distanceFromPrevious":7.099,"cumulativeDistance":32.2,"type":"liikennepaikka"},{"name":"Karhejärvi","code":"Krr","km":"224+902","distanceFromPrevious":8.586,"cumulativeDistance":40.8,"type":"liikennepaikka"},{"name":"Sisättö","code":"Stö","km":"235+602","distanceFromPrevious":10.699,"cumulativeDistance":51.5,"type":"liikennepaikka"},{"name":"Vahojärvi","code":"Vjr","km":"244+926","distanceFromPrevious":9.324,"cumulativeDistance":60.8,"type":"liikennepaikka"},{"name":"Poikkeus","code":"Pkk","km":"254+744","distanceFromPrevious":9.818,"cumulativeDistance":70.6,"type":"liikennepaikka"},{"name":"Parkano","code":"Pko","km":"262+483","distanceFromPrevious":7.739,"cumulativeDistance":78.3,"type":"liikennepaikka"},{"name":"Lamminkoski","code":"Lmk","km":"268+785","distanceFromPrevious":6.302,"cumulativeDistance":84.6,"type":"liikennepaikka"},{"name":"Kuivasjärvi","code":"Kis","km":"276+327","distanceFromPrevious":7.542,"cumulativeDistance":92.2,"type":"liikennepaikka"},{"name":"Ratikylä","code":"Rlä","km":"284+344","distanceFromPrevious":8.018,"cumulativeDistance":100.2,"type":"liikennepaikka"},{"name":"Madesjärvi","code":"Md","km":"291+821","distanceFromPrevious":7.478,"cumulativeDistance":107.7,"type":"liikennepaikka"},{"name":"Ylivalli","code":"Ylv","km":"302+016","distanceFromPrevious":10.195,"cumulativeDistance":117.9,"type":"liikennepaikka"},{"name":"Jalasjärvi","code":"Jal","km":"309+871","distanceFromPrevious":7.855,"cumulativeDistance":125.7,"type":"liikennepaikka"},{"name":"Peräseinäjoki","code":"Psj","km":"318+481","distanceFromPrevious":8.611,"cumulativeDistance":134.3,"type":"liikennepaikka"},{"name":"Pohjois-Louko","code":"Plu","km":"329+329","distanceFromPrevious":10.848,"cumulativeDistance":145.2,"type":"liikennepaikka"},{"name":"Larvakytö","code":"Lyö","km":"333+057","distanceFromPrevious":3.728,"cumulativeDistance":148.9,"type":"liikennepaikka"},{"name":"Syrjämäki","code":"Ski","km":"341+621","distanceFromPrevious":8.564,"cumulativeDistance":157.5,"type":"liikennepaikka"},{"name":"Seinäjoki tavara","code":"Skt","km":"416+580","distanceFromPrevious":4.043,"cumulativeDistance":161.5,"type":"liikennepaikan osa (SEINÄJOKI)"},{"name":"Seinäjoki asema","code":"Sk","km":"418+001","distanceFromPrevious":1.379,"cumulativeDistance":162.9,"type":"liikennepaikan osa (SEINÄJOKI)"}],"Lielahti–Kokemäki":[{"name":"Lielahti","code":"Llh","km":"193+393","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Tesoma","code":"Tso","km":"196+230","distanceFromPrevious":2.873,"cumulativeDistance":2.9,"type":"seisake"},{"name":"Kalkku","code":"Kau","km":"199+471","distanceFromPrevious":3.24,"cumulativeDistance":6.1,"type":"liikennepaikka"},{"name":"Nokia","code":"Noa","km":"204+004","distanceFromPrevious":4.457,"cumulativeDistance":10.6,"type":"liikennepaikka"},{"name":"Siuro","code":"Siu","km":"213+355","distanceFromPrevious":9.246,"cumulativeDistance":19.8,"type":"liikennepaikka"},{"name":"Suoniemi","code":"Snm","km":"220+655","distanceFromPrevious":7.209,"cumulativeDistance":27.0,"type":"liikennepaikka"},{"name":"Karkku","code":"Kru","km":"230+733","distanceFromPrevious":10.044,"cumulativeDistance":37.1,"type":"liikennepaikka"},{"name":"Heinoo","code":"Hno","km":"237+965","distanceFromPrevious":7.045,"cumulativeDistance":44.1,"type":"liikennepaikka"},{"name":"Vammala","code":"Vma","km":"245+885","distanceFromPrevious":7.183,"cumulativeDistance":51.3,"type":"liikennepaikka"},{"name":"Äetsä","code":"Äs","km":"258+280","distanceFromPrevious":12.207,"cumulativeDistance":63.5,"type":"liikennepaikka"},{"name":"Ahvenus","code":"Ahv","km":"270+960","distanceFromPrevious":12.526,"cumulativeDistance":76.0,"type":"liikennepaikka"},{"name":"Kokemäki","code":"Kki","km":"284+442","distanceFromPrevious":12.769,"cumulativeDistance":88.8,"type":"liikennepaikka"}],"Kokemäki–Pori":[{"name":"Kokemäki","code":"Kki","km":"284+442","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Harjavalta","code":"Hva","km":"295+542","distanceFromPrevious":11.104,"cumulativeDistance":11.1,"type":"liikennepaikka"},{"name":"Nakkila","code":"Nal","km":"308+091","distanceFromPrevious":12.552,"cumulativeDistance":23.7,"type":"liikennepaikka"},{"name":"Pori","code":"Pri","km":"322+278","distanceFromPrevious":14.177,"cumulativeDistance":37.8,"type":"liikennepaikka"}],"Pori–Mäntyluoto":[{"name":"Pori","code":"Pri","km":"322+278","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Mäntyluoto","code":"Mn","km":"342+020","distanceFromPrevious":19.805,"cumulativeDistance":19.8,"type":"liikennepaikka"}],"Mäntyluoto–Tahkoluoto":[{"name":"Tahkoluoto","code":"Tko","km":"350+235","distanceFromPrevious":10.421,"cumulativeDistance":10.4,"type":"liikennepaikka"}],"Kokemäki–Rauma":[{"name":"Kokemäki","code":"Kki","km":"284+442","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Kiukainen","code":"Kn","km":"297+395","distanceFromPrevious":12.95,"cumulativeDistance":13.0,"type":"liikennepaikka"},{"name":"Vuojoki","code":"Vjo","km":"318+501","distanceFromPrevious":21.101,"cumulativeDistance":34.1,"type":"liikennepaikka"},{"name":"Rauma","code":"Rma","km":"331+659","distanceFromPrevious":13.159,"cumulativeDistance":47.2,"type":"liikennepaikka"}],"Pori–Aittaluoto":[{"name":"Pori","code":"Pri","km":"322+278","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Aittaluoto","code":"Rsn","km":"328+220","distanceFromPrevious":5.925,"cumulativeDistance":5.9,"type":"liikennepaikka"}],"Niinisalo–Parkano":[{"name":"Niinisalo","code":"Nns","km":"386+215","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Parkano","code":"Pko","km":"428+002","distanceFromPrevious":41.768,"cumulativeDistance":41.8,"type":"liikennepaikka"}],"Seinäjoki–Vaasa":[{"name":"Seinäjoki tavara","code":"Skt","km":"416+580","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (SEINÄJOKI)"},{"name":"Seinäjoki asema","code":"Sk","km":"418+001","distanceFromPrevious":1.379,"cumulativeDistance":1.4,"type":"liikennepaikan osa (SEINÄJOKI)"},{"name":"Ylistaro","code":"Yst","km":"439+558","distanceFromPrevious":21.565,"cumulativeDistance":22.9,"type":"seisake"},{"name":"Isokyrö","code":"Iky","km":"447+488","distanceFromPrevious":7.936,"cumulativeDistance":30.9,"type":"liikennepaikka"},{"name":"Tervajoki","code":"Tk","km":"460+156","distanceFromPrevious":12.675,"cumulativeDistance":43.6,"type":"seisake"},{"name":"Laihia","code":"Lai","km":"468+916","distanceFromPrevious":8.766,"cumulativeDistance":52.3,"type":"liikennepaikka"},{"name":"Vaasa","code":"Vs","km":"492+588","distanceFromPrevious":23.666,"cumulativeDistance":76.0,"type":"liikennepaikka"}],"Vaasa–Vaskiluoto":[{"name":"Vaasa","code":"Vs","km":"492+588","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Vaskiluoto","code":"Vsk","km":"496+463","distanceFromPrevious":3.869,"cumulativeDistance":3.9,"type":"liikennepaikka"}],"Seinäjoki–Kaskinen":[{"name":"Seinäjoki tavara","code":"Skt","km":"416+580","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (SEINÄJOKI)"},{"name":"Seinäjoki asema","code":"Sk","km":"418+001","distanceFromPrevious":1.379,"cumulativeDistance":1.4,"type":"liikennepaikan osa (SEINÄJOKI)"},{"name":"Koskenkorva","code":"Kos","km":"442+447","distanceFromPrevious":24.461,"cumulativeDistance":25.8,"type":"liikennepaikka"},{"name":"Lohiluoma","code":"Luo","km":"463+619","distanceFromPrevious":21.175,"cumulativeDistance":47.0,"type":"linjavaihde"},{"name":"Kauhajoki","code":"Kji","km":"472+720","distanceFromPrevious":9.099,"cumulativeDistance":56.1,"type":"liikennepaikka"},{"name":"Teuva","code":"Tuv","km":"497+474","distanceFromPrevious":24.763,"cumulativeDistance":80.9,"type":"liikennepaikka"},{"name":"Närpiö","code":"När","km":"518+255","distanceFromPrevious":20.787,"cumulativeDistance":101.7,"type":"linjavaihde"},{"name":"Kaskinen","code":"Ksk","km":"530+522","distanceFromPrevious":12.266,"cumulativeDistance":113.9,"type":"liikennepaikka"}],"Seinäjoki–Oulu":[{"name":"Seinäjoki tavara","code":"Skt","km":"416+580","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (SEINÄJOKI)"},{"name":"Seinäjoki asema","code":"Sk","km":"418+001","distanceFromPrevious":1.379,"cumulativeDistance":1.4,"type":"liikennepaikan osa (SEINÄJOKI)"},{"name":"Ruha","code":"Rha","km":"431+132","distanceFromPrevious":13.707,"cumulativeDistance":15.1,"type":"liikennepaikka"},{"name":"Lapua","code":"Lpa","km":"441+094","distanceFromPrevious":9.948,"cumulativeDistance":25.0,"type":"liikennepaikka"},{"name":"Rajaperkiö","code":"Rjp","km":"448+396","distanceFromPrevious":7.31,"cumulativeDistance":32.3,"type":"liikennepaikka"},{"name":"Kauhava","code":"Kha","km":"455+728","distanceFromPrevious":7.337,"cumulativeDistance":39.7,"type":"liikennepaikka"},{"name":"Raunio","code":"Rio","km":"464+845","distanceFromPrevious":9.108,"cumulativeDistance":48.8,"type":"liikennepaikka"},{"name":"Härmä","code":"Hm","km":"472+940","distanceFromPrevious":8.058,"cumulativeDistance":56.8,"type":"liikennepaikka"},{"name":"Voltti","code":"Vt","km":"479+402","distanceFromPrevious":6.581,"cumulativeDistance":63.4,"type":"liikennepaikka"},{"name":"Köykkäri","code":"Kök","km":"486+491","distanceFromPrevious":7.085,"cumulativeDistance":70.5,"type":"liikennepaikka"},{"name":"Jepua","code":"Jpa","km":"495+784","distanceFromPrevious":9.301,"cumulativeDistance":79.8,"type":"liikennepaikka"},{"name":"Riijärvi","code":"Rjr","km":"502+567","distanceFromPrevious":6.695,"cumulativeDistance":86.5,"type":"liikennepaikka"},{"name":"Kovjoki","code":"Koi","km":"508+925","distanceFromPrevious":6.361,"cumulativeDistance":92.9,"type":"liikennepaikka"},{"name":"Pännäinen","code":"Pnä","km":"518+604","distanceFromPrevious":9.677,"cumulativeDistance":102.5,"type":"liikennepaikka"},{"name":"Kolppi","code":"Kpi","km":"525+100","distanceFromPrevious":6.578,"cumulativeDistance":109.1,"type":"liikennepaikka"},{"name":"Kruunupyy","code":"Kpy","km":"537+585","distanceFromPrevious":12.492,"cumulativeDistance":121.6,"type":"liikennepaikka"},{"name":"Kokkola","code":"Kok","km":"551+441","distanceFromPrevious":13.877,"cumulativeDistance":135.5,"type":"liikennepaikka"},{"name":"Matkaneva","code":"Mtv","km":"562+607","distanceFromPrevious":11.169,"cumulativeDistance":146.7,"type":"liikennepaikka"},{"name":"Kälviä","code":"Klv","km":"570+273","distanceFromPrevious":7.651,"cumulativeDistance":154.3,"type":"liikennepaikka"},{"name":"Riippa","code":"Rpa","km":"577+477","distanceFromPrevious":7.219,"cumulativeDistance":161.5,"type":"liikennepaikka"},{"name":"Kannus","code":"Kns","km":"591+582","distanceFromPrevious":14.105,"cumulativeDistance":175.6,"type":"liikennepaikka"},{"name":"Eskola","code":"Ela","km":"603+762","distanceFromPrevious":12.172,"cumulativeDistance":187.8,"type":"liikennepaikka"},{"name":"Sievi","code":"Svi","km":"613+371","distanceFromPrevious":9.532,"cumulativeDistance":197.3,"type":"liikennepaikka"},{"name":"Karhukangas","code":"Khg","km":"622+897","distanceFromPrevious":9.523,"cumulativeDistance":206.9,"type":"liikennepaikka"},{"name":"Ylivieska","code":"Yv","km":"630+343","distanceFromPrevious":7.442,"cumulativeDistance":214.3,"type":"liikennepaikka"},{"name":"Kangas","code":"Kgs","km":"642+466","distanceFromPrevious":12.119,"cumulativeDistance":226.4,"type":"liikennepaikka"},{"name":"Oulainen","code":"Ou","km":"657+850","distanceFromPrevious":15.384,"cumulativeDistance":241.8,"type":"liikennepaikka"},{"name":"Kilpua","code":"Kua","km":"668+910","distanceFromPrevious":11.043,"cumulativeDistance":252.9,"type":"liikennepaikka"},{"name":"Vihanti","code":"Vti","km":"684+573","distanceFromPrevious":15.661,"cumulativeDistance":268.5,"type":"liikennepaikka"},{"name":"Ahonpää","code":"Aho","km":"690+468","distanceFromPrevious":5.896,"cumulativeDistance":274.4,"type":"liikennepaikka"},{"name":"Tuomioja","code":"Tja","km":"698+504","distanceFromPrevious":8.039,"cumulativeDistance":282.5,"type":"liikennepaikka"},{"name":"Ruukki","code":"Rki","km":"705+228","distanceFromPrevious":6.727,"cumulativeDistance":289.2,"type":"liikennepaikka"},{"name":"Hirvineva","code":"Hvn","km":"715+500","distanceFromPrevious":10.177,"cumulativeDistance":299.4,"type":"liikennepaikka"},{"name":"Tikkaperä","code":"Tkp","km":"720+741","distanceFromPrevious":5.241,"cumulativeDistance":304.6,"type":"liikennepaikka"},{"name":"Liminka","code":"Lka","km":"728+483","distanceFromPrevious":7.745,"cumulativeDistance":312.3,"type":"liikennepaikka"},{"name":"Kempele","code":"Kml","km":"741+075","distanceFromPrevious":12.586,"cumulativeDistance":324.9,"type":"liikennepaikka"},{"name":"Oulunlahti","code":"Oll","km":"746+876","distanceFromPrevious":5.803,"cumulativeDistance":330.7,"type":"liikennepaikan osa (OULU)"},{"name":"Oulu Nokela","code":"Nok","km":"750+030","distanceFromPrevious":3.155,"cumulativeDistance":333.9,"type":"liikennepaikan osa (OULU)"},{"name":"Oulu tavara","code":"Olt","km":"751+360","distanceFromPrevious":1.328,"cumulativeDistance":335.2,"type":"liikennepaikan osa (OULU)"},{"name":"Oulu asema","code":"Ol","km":"752+778","distanceFromPrevious":1.424,"cumulativeDistance":336.6,"type":"liikennepaikan osa (OULU)"},{"name":"Oulu Nokela","code":"Nok","km":"750+030","distanceFromPrevious":null,"cumulativeDistance":null,"type":"liikennepaikan osa (OULU)"},{"name":"Oulu Oritkari","code":"Ori","km":"751+180","distanceFromPrevious":1.2,"cumulativeDistance":1.2,"type":"liikennepaikan osa (OULU)"}],"Pännäinen–Pietarsaari":[{"name":"Pännäinen","code":"Pnä","km":"518+604","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Pietarsaari","code":"Pts","km":"528+780","distanceFromPrevious":10.565,"cumulativeDistance":10.6,"type":"liikennepaikka"}],"Pietarsaari–Alholma":[{"name":"Pietarsaari","code":"Pts","km":"528+780","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Alholma","code":"Alh","km":"532+570","distanceFromPrevious":3.792,"cumulativeDistance":3.8,"type":"liikennepaikka"}],"Kokkola–Ykspihlaja":[{"name":"Kokkola","code":"Kok","km":"551+441","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Ykspihlaja tavara","code":"Ykst","km":"553+900","distanceFromPrevious":3.061,"cumulativeDistance":3.1,"type":"liikennepaikan osa (YKSPIHLAJA)"},{"name":"Ykspihlaja väliratapiha","code":"Yksv","km":"555+511","distanceFromPrevious":1.604,"cumulativeDistance":4.7,"type":"liikennepaikan osa (YKSPIHLAJA)"}],"Tuomioja–Raahe":[{"name":"Tuomioja","code":"Tja","km":"698+504","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Raahe","code":"Rhe","km":"726+726","distanceFromPrevious":28.208,"cumulativeDistance":28.2,"type":"liikennepaikka"}],"Raahe–Rautaruukki":[{"name":"Raahe","code":"Rhe","km":"726+726","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Rautaruukki","code":"Rat","km":"730+050","distanceFromPrevious":3.274,"cumulativeDistance":3.3,"type":"liikennepaikka"}],"Riihimäki–Kouvola":[{"name":"Riihimäki tavara","code":"Rit","km":"68+773","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (RIIHIMÄKI)"},{"name":"Riihimäki lajittelu","code":"Rila","km":"70+068","distanceFromPrevious":1.295,"cumulativeDistance":1.3,"type":"liikennepaikan osa (RIIHIMÄKI)"},{"name":"Riihimäki asema","code":"Ri","km":"71+410","distanceFromPrevious":1.339,"cumulativeDistance":2.6,"type":"liikennepaikan osa (RIIHIMÄKI)"},{"name":"Kekomäki","code":"Kek","km":"79+288","distanceFromPrevious":7.972,"cumulativeDistance":10.6,"type":"liikennepaikka"},{"name":"Hikiä","code":"Hk","km":"79+743","distanceFromPrevious":0.455,"cumulativeDistance":11.1,"type":"seisake"},{"name":"Hausjärvi tavara","code":"Has","km":"86+210","distanceFromPrevious":6.469,"cumulativeDistance":17.5,"type":"liikennepaikan osa (HAUSJÄRVI)"},{"name":"Oitti","code":"Oi","km":"86+809","distanceFromPrevious":0.599,"cumulativeDistance":18.1,"type":"liikennepaikan osa (HAUSJÄRVI)"},{"name":"Mommila","code":"Mla","km":"91+430","distanceFromPrevious":4.618,"cumulativeDistance":22.7,"type":"seisake"},{"name":"Jutila","code":"Jut","km":"94+620","distanceFromPrevious":3.19,"cumulativeDistance":25.9,"type":"liikennepaikka"},{"name":"Lappila","code":"Laa","km":"97+693","distanceFromPrevious":3.072,"cumulativeDistance":29.0,"type":"seisake"},{"name":"Järvelä","code":"Jr","km":"103+596","distanceFromPrevious":5.901,"cumulativeDistance":34.9,"type":"liikennepaikka"},{"name":"Herrala","code":"Hr","km":"115+790","distanceFromPrevious":12.158,"cumulativeDistance":47.1,"type":"seisake"},{"name":"Tommola","code":"Tom","km":"117+197","distanceFromPrevious":1.407,"cumulativeDistance":48.5,"type":"liikennepaikka"},{"name":"Hakosilta","code":"Hlt","km":"119+540","distanceFromPrevious":2.343,"cumulativeDistance":50.8,"type":"liikennepaikka"},{"name":"Lahti","code":"Lh","km":"130+170","distanceFromPrevious":10.625,"cumulativeDistance":61.4,"type":"liikennepaikka"},{"name":"Villähde","code":"Vlh","km":"140+442","distanceFromPrevious":10.275,"cumulativeDistance":71.7,"type":"liikennepaikka"},{"name":"Nastola","code":"Nsl","km":"146+169","distanceFromPrevious":5.731,"cumulativeDistance":77.5,"type":"seisake"},{"name":"Uusikylä","code":"Ukä","km":"149+485","distanceFromPrevious":3.333,"cumulativeDistance":80.8,"type":"liikennepaikka"},{"name":"Mankala","code":"Mka","km":"160+050","distanceFromPrevious":10.554,"cumulativeDistance":91.3,"type":"liikennepaikka"},{"name":"Kausala","code":"Ka","km":"169+425","distanceFromPrevious":9.313,"cumulativeDistance":100.7,"type":"seisake"},{"name":"Niinimäki","code":"Nmä","km":"172+534","distanceFromPrevious":3.109,"cumulativeDistance":103.8,"type":"liikennepaikka"},{"name":"Saunamäki","code":"Smä","km":"180+534","distanceFromPrevious":7.895,"cumulativeDistance":111.7,"type":"liikennepaikka"},{"name":"Koria","code":"Kra","km":"185+374","distanceFromPrevious":4.829,"cumulativeDistance":116.5,"type":"seisake"},{"name":"Kouvola asema","code":"Kv","km":"191+540","distanceFromPrevious":6.161,"cumulativeDistance":122.6,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Kouvola lajittelu","code":"Kvla","km":"192+570","distanceFromPrevious":1.042,"cumulativeDistance":123.7,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Kouvola tavara","code":"Kvt","km":"194+050","distanceFromPrevious":1.481,"cumulativeDistance":125.2,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Kullasvaara","code":"Kuv","km":"197+300","distanceFromPrevious":3.253,"cumulativeDistance":128.4,"type":"liikennepaikan osa (KOUVOLA)"}],"Kouvola–Kuusankoski":[{"name":"Kouvola asema","code":"Kv","km":"191+540","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Kuusankoski","code":"Kuk","km":"199+290","distanceFromPrevious":9.574,"cumulativeDistance":9.6,"type":"liikennepaikka"}],"Lahti–Heinola":[{"name":"Lahti","code":"Lh","km":"130+170","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Vierumäki","code":"Vrm","km":"153+801","distanceFromPrevious":23.652,"cumulativeDistance":23.7,"type":"linjavaihde"},{"name":"Myllyoja","code":"Myl","km":"161+727","distanceFromPrevious":7.924,"cumulativeDistance":31.6,"type":"liikennepaikka"},{"name":"Heinola","code":"Ha","km":"167+607","distanceFromPrevious":5.881,"cumulativeDistance":37.5,"type":"liikennepaikka"}],"Lahti–Loviisan satama":[{"name":"Lahti","code":"Lh","km":"130+170","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Orimattila","code":"Om","km":"150+407","distanceFromPrevious":20.224,"cumulativeDistance":20.2,"type":"linjavaihde"},{"name":"Lapinjärvi","code":"Lpj","km":"185+432","distanceFromPrevious":35.007,"cumulativeDistance":55.2,"type":"liikennepaikka"},{"name":"Loviisan satama","code":"Lvs","km":"207+209","distanceFromPrevious":21.764,"cumulativeDistance":77.0,"type":"liikennepaikka"}],"Kouvola–Kotka":[{"name":"Kouvola asema","code":"Kv","km":"191+540","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Kouvola lajittelu","code":"Kvla","km":"192+570","distanceFromPrevious":1.042,"cumulativeDistance":1.0,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Kouvola tavara","code":"Kvt","km":"194+050","distanceFromPrevious":1.481,"cumulativeDistance":2.5,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Myllykoski","code":"Mki","km":"203+630","distanceFromPrevious":59.0,"cumulativeDistance":14.46,"type":"seisake"},{"name":"Pitkäkallio","code":"Pio","km":"204+324","distanceFromPrevious":0.698,"cumulativeDistance":15.1,"type":"liikennepaikka"},{"name":"Inkeroinen","code":"Ikr","km":"212+781","distanceFromPrevious":8.458,"cumulativeDistance":23.6,"type":"liikennepaikka"},{"name":"Juurikorpi","code":"Jri","km":"224+898","distanceFromPrevious":12.109,"cumulativeDistance":35.7,"type":"liikennepaikka"},{"name":"Tavastila","code":"Tsl","km":"228+854","distanceFromPrevious":3.954,"cumulativeDistance":39.6,"type":"seisake"},{"name":"Kymi","code":"Ky","km":"233+450","distanceFromPrevious":4.602,"cumulativeDistance":44.2,"type":"liikennepaikka"},{"name":"Kyminlinna","code":"Kln","km":"237+255","distanceFromPrevious":3.804,"cumulativeDistance":48.0,"type":"seisake"},{"name":"Kotka Hovinsaari","code":"Hos","km":"240+400","distanceFromPrevious":3.157,"cumulativeDistance":51.2,"type":"liikennepaikan osa (KOTKA)"},{"name":"Kotka tavara","code":"Ktt","km":"240+870","distanceFromPrevious":0.47,"cumulativeDistance":51.6,"type":"liikennepaikan osa (KOTKA)"},{"name":"Paimenportti","code":"Pti","km":"241+190","distanceFromPrevious":0.32,"cumulativeDistance":52.0,"type":"liikennepaikan osa (KOTKA)"},{"name":"Kotka asema","code":"Kta","km":"242+775","distanceFromPrevious":1.586,"cumulativeDistance":53.6,"type":"liikennepaikan osa (KOTKA)"},{"name":"Kotkan satama","code":"Kts","km":"243+579","distanceFromPrevious":0.757,"cumulativeDistance":54.3,"type":"liikennepaikan osa (KOTKA)"}],"Kotka Hovinsaari–Kotka Mussalo":[{"name":"Kotka Hovinsaari","code":"Hos","km":"240+400","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (KOTKA)"},{"name":"Kotka tavara","code":"Ktt","km":"240+870","distanceFromPrevious":0.47,"cumulativeDistance":0.5,"type":"liikennepaikan osa (KOTKA)"},{"name":"Kotolahti","code":"Koo","km":"245+203","distanceFromPrevious":4.334,"cumulativeDistance":4.8,"type":"liikennepaikan osa (KOTKA)"},{"name":"Kotka Mussalo","code":"Mss","km":"247+057","distanceFromPrevious":1.822,"cumulativeDistance":6.6,"type":"liikennepaikan osa (KOTKA)"}],"Juurikorpi–Hamina":[{"name":"Juurikorpi","code":"Jri","km":"224+898","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Hamina","code":"Hma","km":"243+646","distanceFromPrevious":18.671,"cumulativeDistance":18.7,"type":"liikennepaikka"}],"Kouvola–Joensuu":[{"name":"Kouvola asema","code":"Kv","km":"191+540","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Kouvola lajittelu","code":"Kvla","km":"192+570","distanceFromPrevious":1.042,"cumulativeDistance":1.0,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Kouvola tavara","code":"Kvt","km":"194+050","distanceFromPrevious":1.481,"cumulativeDistance":2.5,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Kullasvaara","code":"Kuv","km":"197+300","distanceFromPrevious":3.253,"cumulativeDistance":5.8,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Utti","code":"Uti","km":"204+085","distanceFromPrevious":6.786,"cumulativeDistance":12.6,"type":"linjavaihde"},{"name":"Kattilaharju","code":"Kth","km":"205+556","distanceFromPrevious":1.471,"cumulativeDistance":14.0,"type":"liikennepaikka"},{"name":"Kaipiainen","code":"Kpa","km":"214+451","distanceFromPrevious":8.891,"cumulativeDistance":22.9,"type":"liikennepaikka"},{"name":"Kaitjärvi","code":"Kjr","km":"226+912","distanceFromPrevious":12.46,"cumulativeDistance":35.4,"type":"liikennepaikka"},{"name":"Taavetti","code":"Ta","km":"238+589","distanceFromPrevious":11.678,"cumulativeDistance":47.1,"type":"liikennepaikka"},{"name":"Luumäki","code":"Lä","km":"250+540","distanceFromPrevious":11.95,"cumulativeDistance":59.0,"type":"liikennepaikka"},{"name":"Rasinsuo","code":"Ras","km":"258+510","distanceFromPrevious":7.971,"cumulativeDistance":67.0,"type":"liikennepaikka"},{"name":"Törölä","code":"Trä","km":"264+972","distanceFromPrevious":6.462,"cumulativeDistance":73.4,"type":"liikennepaikka"},{"name":"Tapavainola","code":"Tap","km":"270+405","distanceFromPrevious":5.433,"cumulativeDistance":78.9,"type":"liikennepaikka"},{"name":"Lappeenranta","code":"Lr","km":"(277+765)","distanceFromPrevious":7.359,"cumulativeDistance":86.2,"type":"liikennepaikka"},{"name":"Lauritsala","code":"Lrs","km":"291+936","distanceFromPrevious":4.209,"cumulativeDistance":90.4,"type":"liikennepaikka"},{"name":"Muukko","code":"Mko","km":"297+112","distanceFromPrevious":5.178,"cumulativeDistance":95.6,"type":"liikennepaikka"},{"name":"Joutseno","code":"Jts","km":"305+826","distanceFromPrevious":8.717,"cumulativeDistance":104.3,"type":"liikennepaikka"},{"name":"Rauha","code":"Rah","km":"318+490","distanceFromPrevious":12.668,"cumulativeDistance":117.0,"type":"liikennepaikka"},{"name":"Imatra asema","code":"Imr","km":"323+977","distanceFromPrevious":5.487,"cumulativeDistance":122.5,"type":"liikennepaikan osa (IMATRA)"},{"name":"Imatra tavara","code":"Imt","km":"326+542","distanceFromPrevious":2.617,"cumulativeDistance":125.1,"type":"liikennepaikan osa (IMATRA)"},{"name":"Immola","code":"Im","km":"332+699","distanceFromPrevious":6.131,"cumulativeDistance":131.2,"type":"liikennepaikan osa (IMATRA)"},{"name":"Rautjärvi","code":"Rjä","km":"345+788","distanceFromPrevious":13.081,"cumulativeDistance":144.3,"type":"liikennepaikka"},{"name":"Simpele","code":"Spl","km":"368+317","distanceFromPrevious":22.358,"cumulativeDistance":166.7,"type":"liikennepaikka"},{"name":"Kirjola","code":"Kij","km":"384+475","distanceFromPrevious":15.99,"cumulativeDistance":182.7,"type":"linjavaihde"},{"name":"Parikkala","code":"Par","km":"387+302","distanceFromPrevious":2.825,"cumulativeDistance":185.5,"type":"liikennepaikka"},{"name":"Saari","code":"Sr","km":"405+246","distanceFromPrevious":17.925,"cumulativeDistance":203.4,"type":"liikennepaikka"},{"name":"Poiksilta","code":"Poi","km":"416+728","distanceFromPrevious":11.481,"cumulativeDistance":214.9,"type":"linjavaihde"},{"name":"Kesälahti","code":"Kti","km":"428+003","distanceFromPrevious":11.272,"cumulativeDistance":226.2,"type":"liikennepaikka"},{"name":"Puhos","code":"Pus","km":"452+808","distanceFromPrevious":24.802,"cumulativeDistance":251.0,"type":"liikennepaikka"},{"name":"Kitee","code":"Kit","km":"460+016","distanceFromPrevious":7.206,"cumulativeDistance":258.2,"type":"liikennepaikka"},{"name":"Säkäniemi","code":"Sä","km":"480+242","distanceFromPrevious":20.221,"cumulativeDistance":278.4,"type":"liikennepaikka"},{"name":"Tikkala","code":"Tkk","km":"592+461","distanceFromPrevious":5.585,"cumulativeDistance":284.0,"type":"liikennepaikka"},{"name":"Hammaslahti","code":"Hsl","km":"602+199","distanceFromPrevious":9.396,"cumulativeDistance":293.4,"type":"liikennepaikka"},{"name":"Niittylahti","code":"Nth","km":"613+475","distanceFromPrevious":11.205,"cumulativeDistance":304.6,"type":"liikennepaikka"},{"name":"Joensuu Koppola","code":"Kpp","km":"620+902","distanceFromPrevious":7.409,"cumulativeDistance":312.0,"type":"liikennepaikan osa (JOENSUU)"},{"name":"Joensuu Sulkulahti","code":"Sul","km":"622+650","distanceFromPrevious":1.748,"cumulativeDistance":313.8,"type":"liikennepaikan osa (JOENSUU)"},{"name":"Joensuu Peltola","code":"Plt","km":"623+540","distanceFromPrevious":0.889,"cumulativeDistance":314.6,"type":"liikennepaikan osa (JOENSUU)"},{"name":"Joensuu asema","code":"Jns","km":"624+313","distanceFromPrevious":0.749,"cumulativeDistance":315.4,"type":"liikennepaikan osa (JOENSUU)"}],"Luumäki–Vainikkala-raja":[{"name":"Luumäki","code":"Lä","km":"250+540","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Pulsa","code":"Pl","km":"262+491","distanceFromPrevious":11.952,"cumulativeDistance":12.0,"type":"liikennepaikka"},{"name":"Raippo","code":"Rpo","km":"270+052","distanceFromPrevious":7.563,"cumulativeDistance":19.5,"type":"liikennepaikka"},{"name":"Vainikkala tavara","code":"Vnat","km":"281+700","distanceFromPrevious":11.65,"cumulativeDistance":31.2,"type":"liikennepaikan osa (VAINIKKALA)"},{"name":"Vainikkala asema","code":"Vna","km":"282+784","distanceFromPrevious":1.084,"cumulativeDistance":32.2,"type":"liikennepaikan osa (VAINIKKALA)"},{"name":"Vainikkala-raja","code":"Vnar","km":"284+862","distanceFromPrevious":2.079,"cumulativeDistance":34.3,"type":"liikennepaikka"}],"Lappeenranta–Mustolan satama":[{"name":"Lappeenranta","code":"Lr","km":"287+726","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Mustolan satama","code":"Mst","km":"295+515","distanceFromPrevious":13.25,"cumulativeDistance":13.3,"type":"liikennepaikka"}],"Imatra tavara–Imatrankoski-raja":[{"name":"Imatra tavara","code":"Imt","km":"326+542","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (IMATRA)"},{"name":"Imatrankoski","code":"Imk","km":"331+267","distanceFromPrevious":4.439,"cumulativeDistance":4.4,"type":"liikennepaikan osa (IMATRA)"},{"name":"Pelkola","code":"Pa","km":"335+672","distanceFromPrevious":4.417,"cumulativeDistance":8.9,"type":"liikennepaikan osa (IMATRA)"},{"name":"Imatrankoski-raja","code":"Imkr","km":"337+095","distanceFromPrevious":1.427,"cumulativeDistance":10.3,"type":"liikennepaikka"}],"Niirala-raja–Säkäniemi":[{"name":"Niirala-raja","code":"Nrlr","km":"554+080","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Niirala","code":"Nrl","km":"555+846","distanceFromPrevious":1.765,"cumulativeDistance":1.8,"type":"liikennepaikka"},{"name":"Tohmajärvi","code":"Toh","km":"571+752","distanceFromPrevious":15.905,"cumulativeDistance":17.7,"type":"liikennepaikka"},{"name":"Valkeasuo","code":"Vso","km":"583+976","distanceFromPrevious":12.222,"cumulativeDistance":29.9,"type":"linjavaihde"},{"name":"Säkäniemi","code":"Sä","km":"586+873","distanceFromPrevious":2.897,"cumulativeDistance":32.8,"type":"liikennepaikka"}],"Joensuu–Ilomantsi":[{"name":"Joensuu asema","code":"Jns","km":"624+313","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (JOENSUU)"},{"name":"Joensuu Peltola","code":"Plt","km":"623+540","distanceFromPrevious":0.749,"cumulativeDistance":0.7,"type":"liikennepaikan osa (JOENSUU)"},{"name":"Joensuu Sulkulahti","code":"Sul","km":"622+650","distanceFromPrevious":0.889,"cumulativeDistance":1.6,"type":"liikennepaikan osa (JOENSUU)"},{"name":"Heinävaara","code":"Häv","km":"648+408","distanceFromPrevious":22.464,"cumulativeDistance":24.1,"type":"liikennepaikka"},{"name":"Tuupovaara","code":"Tpv","km":"668+672","distanceFromPrevious":20.265,"cumulativeDistance":44.4,"type":"liikennepaikka"},{"name":"Ilomantsi","code":"Ilo","km":"695+203","distanceFromPrevious":26.529,"cumulativeDistance":70.9,"type":"liikennepaikka"}],"Joensuu–Nurmes":[{"name":"Joensuu Sulkulahti","code":"Sul","km":"622+650","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (JOENSUU)"},{"name":"Joensuu Peltola","code":"Plt","km":"623+540","distanceFromPrevious":0.889,"cumulativeDistance":0.9,"type":"liikennepaikan osa (JOENSUU)"},{"name":"Joensuu asema","code":"Jns","km":"624+313","distanceFromPrevious":0.749,"cumulativeDistance":1.6,"type":"liikennepaikan osa (JOENSUU)"},{"name":"Kontiolahti","code":"Khi","km":"640+295","distanceFromPrevious":15.985,"cumulativeDistance":17.6,"type":"liikennepaikka"},{"name":"Eno","code":"Eno","km":"660+170","distanceFromPrevious":19.872,"cumulativeDistance":37.5,"type":"liikennepaikka"},{"name":"Uimaharju","code":"Uim","km":"674+451","distanceFromPrevious":14.286,"cumulativeDistance":51.8,"type":"liikennepaikka"},{"name":"Vuonislahti","code":"Vsl","km":"705+240","distanceFromPrevious":30.761,"cumulativeDistance":82.5,"type":"liikennepaikka"},{"name":"Lieksa","code":"Lis","km":"728+121","distanceFromPrevious":22.867,"cumulativeDistance":105.4,"type":"liikennepaikka"},{"name":"Kylänlahti","code":"Kyn","km":"742+912","distanceFromPrevious":14.79,"cumulativeDistance":120.2,"type":"seisake"},{"name":"Viekki","code":"Vk","km":"753+979","distanceFromPrevious":11.041,"cumulativeDistance":131.2,"type":"linjavaihde"},{"name":"Höljäkkä","code":"Höl","km":"765+261","distanceFromPrevious":11.173,"cumulativeDistance":142.4,"type":"seisake"},{"name":"Kohtavaara","code":"Koh","km":"775+774","distanceFromPrevious":10.516,"cumulativeDistance":152.9,"type":"seisake"},{"name":"Nurmes","code":"Nrm","km":"784+420","distanceFromPrevious":8.639,"cumulativeDistance":161.6,"type":"liikennepaikka"}],"Nurmes–Kontiomäki":[{"name":"Nurmes","code":"Nrm","km":"784+420","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Pitkämäki","code":"Ptk","km":"789+618","distanceFromPrevious":5.129,"cumulativeDistance":5.1,"type":"liikennepaikka"},{"name":"Valtimo","code":"Vlm","km":"808+636","distanceFromPrevious":19.01,"cumulativeDistance":24.1,"type":"liikennepaikka"},{"name":"Maanselkä","code":"Mlk","km":"836+049","distanceFromPrevious":27.413,"cumulativeDistance":51.6,"type":"liikennepaikka"},{"name":"Vuokatti","code":"Vkt","km":"868+838","distanceFromPrevious":32.791,"cumulativeDistance":84.3,"type":"liikennepaikka"},{"name":"Kontiomäki","code":"Kon","km":"893+088","distanceFromPrevious":24.252,"cumulativeDistance":108.6,"type":"liikennepaikka"}],"Vuokatti–Lahnaslampi":[{"name":"Vuokatti","code":"Vkt","km":"868+838","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Lahnaslampi","code":"Lhn","km":"880+297","distanceFromPrevious":11.135,"cumulativeDistance":11.1,"type":"liikennepaikka"}],"Kouvola–Pieksämäki":[{"name":"Kullasvaara","code":"Kuv","km":"197+300","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Kouvola tavara","code":"Kvt","km":"194+050","distanceFromPrevious":null,"cumulativeDistance":null,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Kouvola lajittelu","code":"Kvla","km":"192+570","distanceFromPrevious":1.481,"cumulativeDistance":1.5,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Kouvola asema","code":"Kv","km":"191+540","distanceFromPrevious":1.042,"cumulativeDistance":2.5,"type":"liikennepaikan osa (KOUVOLA)"},{"name":"Harju","code":"Hj","km":"201+643","distanceFromPrevious":11.937,"cumulativeDistance":14.5,"type":"liikennepaikka"},{"name":"Selänpää","code":"Spä","km":"209+869","distanceFromPrevious":7.92,"cumulativeDistance":22.4,"type":"liikennepaikka"},{"name":"Vuohijärvi","code":"Vhj","km":"221+308","distanceFromPrevious":11.445,"cumulativeDistance":33.8,"type":"liikennepaikka"},{"name":"Hillosensalmi","code":"Hls","km":"233+344","distanceFromPrevious":12.036,"cumulativeDistance":45.9,"type":"liikennepaikka"},{"name":"Kinni","code":"Kii","km":"247+982","distanceFromPrevious":13.544,"cumulativeDistance":59.4,"type":"liikennepaikka"},{"name":"Mäntyharju","code":"Mr","km":"262+680","distanceFromPrevious":14.49,"cumulativeDistance":73.9,"type":"liikennepaikka"},{"name":"Mynttilä","code":"Myt","km":"270+889","distanceFromPrevious":8.209,"cumulativeDistance":82.1,"type":"liikennepaikka"},{"name":"Lelkola","code":"Lkl","km":"276+011","distanceFromPrevious":5.101,"cumulativeDistance":87.2,"type":"liikennepaikka"},{"name":"Otava","code":"Ot","km":"290+521","distanceFromPrevious":14.448,"cumulativeDistance":101.7,"type":"liikennepaikka"},{"name":"Mikkeli","code":"Mi","km":"305+165","distanceFromPrevious":14.454,"cumulativeDistance":116.1,"type":"liikennepaikka"},{"name":"Hiirola","code":"Hir","km":"318+957","distanceFromPrevious":13.763,"cumulativeDistance":129.9,"type":"liikennepaikka"},{"name":"Kalvitsa","code":"Ksa","km":"330+634","distanceFromPrevious":11.68,"cumulativeDistance":141.5,"type":"liikennepaikka"},{"name":"Haukivuori","code":"Hau","km":"344+442","distanceFromPrevious":13.815,"cumulativeDistance":155.4,"type":"liikennepaikka"},{"name":"Loukolampi","code":"Lol","km":"360+013","distanceFromPrevious":15.574,"cumulativeDistance":170.9,"type":"liikennepaikka"},{"name":"Pieksämäki asema","code":"Pm","km":"376+000","distanceFromPrevious":15.992,"cumulativeDistance":186.9,"type":"liikennepaikan osa (PIEKSÄMÄKI)"},{"name":"Pieksämäki Temu","code":"Tmu","km":"377+340","distanceFromPrevious":1.339,"cumulativeDistance":188.3,"type":"liikennepaikan osa (PIEKSÄMÄKI)"},{"name":"Pieksämäki lajittelu","code":"Pmla","km":"378+640","distanceFromPrevious":1.301,"cumulativeDistance":189.6,"type":"liikennepaikan osa (PIEKSÄMÄKI)"},{"name":"Pieksämäki tavara","code":"Pmt","km":"379+960","distanceFromPrevious":1.32,"cumulativeDistance":190.9,"type":"liikennepaikan osa (PIEKSÄMÄKI)"}],"Mynttilä–Ristiina":[{"name":"Mynttilä","code":"Myt","km":"270+889","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Ristiina","code":"Rst","km":"291+162","distanceFromPrevious":20.272,"cumulativeDistance":20.3,"type":"liikennepaikka"}],"Pieksämäki–Kontiomäki":[{"name":"Pieksämäki asema","code":"Pm","km":"376+000","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (PIEKSÄMÄKI)"},{"name":"Pieksämäki Temu","code":"Tmu","km":"377+340","distanceFromPrevious":1.339,"cumulativeDistance":1.3,"type":"liikennepaikan osa (PIEKSÄMÄKI)"},{"name":"Pieksämäki lajittelu","code":"Pmla","km":"378+640","distanceFromPrevious":1.301,"cumulativeDistance":2.6,"type":"liikennepaikan osa (PIEKSÄMÄKI)"},{"name":"Pieksämäki tavara","code":"Pmt","km":"379+960","distanceFromPrevious":1.32,"cumulativeDistance":4.0,"type":"liikennepaikan osa (PIEKSÄMÄKI)"},{"name":"Haapakoski","code":"Hps","km":"393+454","distanceFromPrevious":13.496,"cumulativeDistance":17.5,"type":"liikennepaikka"},{"name":"Markkala","code":"Mrk","km":"403+737","distanceFromPrevious":10.234,"cumulativeDistance":27.7,"type":"liikennepaikka"},{"name":"Suonenjoki","code":"Snj","km":"413+842","distanceFromPrevious":10.004,"cumulativeDistance":37.7,"type":"liikennepaikka"},{"name":"Salminen","code":"Sln","km":"426+718","distanceFromPrevious":11.528,"cumulativeDistance":49.2,"type":"liikennepaikka"},{"name":"Airaksela","code":"Arl","km":"436+985","distanceFromPrevious":10.078,"cumulativeDistance":59.3,"type":"liikennepaikka"},{"name":"Kurkimäki","code":"Krm","km":"444+074","distanceFromPrevious":7.098,"cumulativeDistance":66.4,"type":"liikennepaikka"},{"name":"Kuopio Iloharju","code":"Ilh","km":"462+550","distanceFromPrevious":15.671,"cumulativeDistance":82.1,"type":"liikennepaikan osa (KUOPIO)"},{"name":"Kuopio asema","code":"Kuo","km":"464+590","distanceFromPrevious":2.071,"cumulativeDistance":84.1,"type":"liikennepaikan osa (KUOPIO)"},{"name":"Kuopio tavara","code":"Kuot","km":"465+500","distanceFromPrevious":0.909,"cumulativeDistance":85.0,"type":"liikennepaikan osa (KUOPIO)"},{"name":"Sorsasalo","code":"Sor","km":"473+754","distanceFromPrevious":8.181,"cumulativeDistance":93.2,"type":"linjavaihde"},{"name":"Toivala","code":"Toi","km":"479+162","distanceFromPrevious":5.392,"cumulativeDistance":98.6,"type":"liikennepaikka"},{"name":"Siilinjärvi asema","code":"Sij","km":"489+718","distanceFromPrevious":10.386,"cumulativeDistance":109.0,"type":"liikennepaikan osa (SIILINJÄRVI)"},{"name":"Alapitkä","code":"Apt","km":"505+840","distanceFromPrevious":15.952,"cumulativeDistance":125.0,"type":"liikennepaikka"},{"name":"Lapinlahti","code":"Lna","km":"525+604","distanceFromPrevious":19.599,"cumulativeDistance":144.6,"type":"liikennepaikka"},{"name":"Taipale","code":"Te","km":"537+605","distanceFromPrevious":11.981,"cumulativeDistance":156.5,"type":"liikennepaikka"},{"name":"Ohenmäki","code":"Ohm","km":"542+264","distanceFromPrevious":4.638,"cumulativeDistance":161.2,"type":"linjavaihde"},{"name":"Peltosalmi","code":"Pmi","km":"545+355","distanceFromPrevious":3.071,"cumulativeDistance":164.3,"type":"linjavaihde"},{"name":"Iisalmen teollisuusrai-","code":"Itr","km":"548+611","distanceFromPrevious":3.255,"cumulativeDistance":167.5,"type":"linjavaihde"},{"name":"Iisalmi","code":"Ilm","km":"550+360","distanceFromPrevious":1.75,"cumulativeDistance":169.3,"type":"liikennepaikka"},{"name":"Soinlahti","code":"Soa","km":"559+651","distanceFromPrevious":8.557,"cumulativeDistance":177.8,"type":"linjavaihde"},{"name":"Kauppilanmäki","code":"Kpl","km":"568+751","distanceFromPrevious":9.047,"cumulativeDistance":186.9,"type":"liikennepaikka"},{"name":"Sukeva","code":"Skv","km":"589+222","distanceFromPrevious":20.478,"cumulativeDistance":207.3,"type":"liikennepaikka"},{"name":"Murtomäki","code":"Mur","km":"613+165","distanceFromPrevious":23.948,"cumulativeDistance":231.3,"type":"liikennepaikka"},{"name":"Kajaani","code":"Kaj","km":"633+491","distanceFromPrevious":20.286,"cumulativeDistance":251.6,"type":"liikennepaikka"},{"name":"Kalliovarasto","code":"Kao","km":"644+770","distanceFromPrevious":11.284,"cumulativeDistance":262.9,"type":"linjavaihde"},{"name":"Kontiomäki","code":"Kon","km":"658+786","distanceFromPrevious":14.011,"cumulativeDistance":276.9,"type":"liikennepaikka"}],"Suonenjoki–Yläkoski":[{"name":"Suonenjoki","code":"Snj","km":"413+842","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Yläkoski","code":"Ylk","km":"416+849","distanceFromPrevious":3.117,"cumulativeDistance":3.1,"type":"liikennepaikka"}],"Murtomäki–Otanmäki":[{"name":"Murtomäki","code":"Mur","km":"613+165","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Otanmäki","code":"Otm","km":"638+822","distanceFromPrevious":25.674,"cumulativeDistance":25.7,"type":"liikennepaikka"}],"Murtomäki–Talvivaara":[{"name":"Murtomäki","code":"Mur","km":"613+165","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Talvivaara","code":"Tlv","km":"636+831","distanceFromPrevious":23.665,"cumulativeDistance":23.7,"type":"liikennepaikka"}],"Kajaani–Lamminniemi":[{"name":"Kajaani","code":"Kaj","km":"633+491","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Lamminniemi","code":"Lam","km":"636+664","distanceFromPrevious":2.47,"cumulativeDistance":2.5,"type":"liikennepaikka"}],"Pieksämäki–Joensuu":[{"name":"Pieksämäki asema","code":"Pm","km":"376+000","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (PIEKSÄMÄKI)"},{"name":"Siikamäki","code":"Skä","km":"389+747","distanceFromPrevious":13.753,"cumulativeDistance":13.8,"type":"liikennepaikka"},{"name":"Huutokoski","code":"Hko","km":"406+988","distanceFromPrevious":17.244,"cumulativeDistance":31.0,"type":"liikennepaikka"},{"name":"Varkaus","code":"Var","km":"424+685","distanceFromPrevious":17.705,"cumulativeDistance":48.7,"type":"liikennepaikka"},{"name":"Syrjä","code":"Syr","km":"452+865","distanceFromPrevious":28.185,"cumulativeDistance":76.9,"type":"linjavaihde"},{"name":"Heinävesi","code":"Hnv","km":"468+135","distanceFromPrevious":15.275,"cumulativeDistance":92.2,"type":"liikennepaikka"},{"name":"Vihtari","code":"Vih","km":"489+889","distanceFromPrevious":21.749,"cumulativeDistance":113.9,"type":"liikennepaikka"},{"name":"Viinijärvi","code":"Vnj","km":"525+592","distanceFromPrevious":35.719,"cumulativeDistance":149.6,"type":"liikennepaikka"},{"name":"Ylämylly","code":"Yly","km":"639+019","distanceFromPrevious":17.551,"cumulativeDistance":167.2,"type":"liikennepaikka"},{"name":"Onttola","code":"Ont","km":"631+177","distanceFromPrevious":7.834,"cumulativeDistance":175.0,"type":"liikennepaikan osa (JOENSUU)"},{"name":"Joensuu asema","code":"Jns","km":"624+313","distanceFromPrevious":6.885,"cumulativeDistance":181.9,"type":"liikennepaikan osa (JOENSUU)"},{"name":"Joensuu Peltola","code":"Plt","km":"623+540","distanceFromPrevious":0.749,"cumulativeDistance":182.6,"type":"liikennepaikan osa (JOENSUU)"},{"name":"Joensuu Sulkulahti","code":"Sul","km":"622+650","distanceFromPrevious":0.889,"cumulativeDistance":183.5,"type":"liikennepaikan osa (JOENSUU)"}],"Varkaus–Kommila":[{"name":"Varkaus","code":"Var","km":"424+685","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Kommila","code":"Kmm","km":"429+700","distanceFromPrevious":6.667,"cumulativeDistance":6.7,"type":"liikennepaikka"}],"Huutokoski–Rantasalmi":[{"name":"Huutokoski","code":"Hko","km":"406+988","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Joroinen","code":"Jor","km":"414+617","distanceFromPrevious":7.634,"cumulativeDistance":7.6,"type":"linjavaihde"},{"name":"Rantasalmi","code":"Rmi","km":"445+165","distanceFromPrevious":30.549,"cumulativeDistance":38.2,"type":"liikennepaikka"}],"Savonlinna–Parikkala":[{"name":"Savonlinna asema","code":"Sl","km":"482+797","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (SAVONLINNA)"},{"name":"Pääskylahti","code":"Pky","km":"484+913","distanceFromPrevious":2.109,"cumulativeDistance":2.1,"type":"liikennepaikan osa (SAVONLINNA)"},{"name":"Kerimäki","code":"Kiä","km":"495+531","distanceFromPrevious":10.562,"cumulativeDistance":12.7,"type":"liikennepaikka"},{"name":"Retretti","code":"Ree","km":"507+500","distanceFromPrevious":11.965,"cumulativeDistance":24.6,"type":"seisake"},{"name":"Lusto","code":"Lus","km":"509+170","distanceFromPrevious":1.674,"cumulativeDistance":26.3,"type":"seisake"},{"name":"Punkaharju","code":"Pun","km":"515+111","distanceFromPrevious":5.94,"cumulativeDistance":32.2,"type":"liikennepaikka"},{"name":"Parikkala","code":"Par","km":"540+500","distanceFromPrevious":25.274,"cumulativeDistance":57.5,"type":"liikennepaikka"}],"Siilinjärvi–Viinijärvi":[{"name":"Siilinjärvi asema","code":"Sij","km":"489+718","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (SIILINJÄRVI)"},{"name":"Ruokosuo","code":"Rsu","km":"494+735","distanceFromPrevious":5.014,"cumulativeDistance":5.0,"type":"liikennepaikan osa (SIILINJÄRVI)"},{"name":"Sänkimäki","code":"Skm","km":"504+931","distanceFromPrevious":10.232,"cumulativeDistance":15.2,"type":"linjavaihde"},{"name":"Kinahmi","code":"Knh","km":"508+922","distanceFromPrevious":3.99,"cumulativeDistance":19.2,"type":"linjavaihde"},{"name":"Juankoski","code":"Jki","km":"532+005","distanceFromPrevious":23.074,"cumulativeDistance":42.3,"type":"liikennepaikka"},{"name":"Luikonlahti","code":"Lui","km":"557+061","distanceFromPrevious":25.006,"cumulativeDistance":67.3,"type":"liikennepaikka"},{"name":"Sysmäjärvi","code":"Smj","km":"588+343","distanceFromPrevious":31.295,"cumulativeDistance":98.6,"type":"liikennepaikka"},{"name":"Viinijärvi","code":"Vnj","km":"656+569","distanceFromPrevious":13.023,"cumulativeDistance":111.6,"type":"liikennepaikka"}],"Sysmäjärvi–Vuonos":[{"name":"Sysmäjärvi","code":"Smj","km":"588+343","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Vuonos","code":"Vns","km":"588+116","distanceFromPrevious":6.196,"cumulativeDistance":6.2,"type":"liikennepaikka"}],"Tampere–Jyväskylä":[{"name":"Tampere asema","code":"Tpe","km":"187+389","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (TAMPERE)"},{"name":"Tampere Järvensivu","code":"Jvs","km":"187+814","distanceFromPrevious":1.203,"cumulativeDistance":1.2,"type":"liikennepaikan osa (TAMPERE)"},{"name":"Haviseva","code":"Hvs","km":"208+135","distanceFromPrevious":20.304,"cumulativeDistance":21.5,"type":"liikennepaikka"},{"name":"Orivesi","code":"Ov","km":"228+276","distanceFromPrevious":19.614,"cumulativeDistance":41.1,"type":"liikennepaikka"},{"name":"Torkkeli","code":"Trk","km":"240+154","distanceFromPrevious":11.811,"cumulativeDistance":52.9,"type":"liikennepaikka"},{"name":"Talviainen","code":"Tv","km":"247+245","distanceFromPrevious":7.086,"cumulativeDistance":60.0,"type":"liikennepaikka"},{"name":"Länkipohja","code":"Läp","km":"256+024","distanceFromPrevious":8.779,"cumulativeDistance":68.8,"type":"liikennepaikka"},{"name":"Lahdenperä","code":"Lpr","km":"267+080","distanceFromPrevious":11.057,"cumulativeDistance":79.9,"type":"liikennepaikka"},{"name":"Jämsä","code":"Jäs","km":"284+084","distanceFromPrevious":16.999,"cumulativeDistance":96.9,"type":"liikennepaikka"},{"name":"Jämsänkoski","code":"Jsk","km":"287+917","distanceFromPrevious":3.829,"cumulativeDistance":100.7,"type":"liikennepaikka"},{"name":"Saakoski","code":"Saa","km":"305+373","distanceFromPrevious":17.454,"cumulativeDistance":118.1,"type":"liikennepaikka"},{"name":"Muurame","code":"Muu","km":"324+768","distanceFromPrevious":19.394,"cumulativeDistance":137.5,"type":"liikennepaikka"},{"name":"Jyväskylä","code":"Jy","km":"340+970","distanceFromPrevious":16.202,"cumulativeDistance":153.7,"type":"liikennepaikka"}],"Jämsä–Kaipola":[{"name":"Jämsä","code":"Jäs","km":"284+084","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Kaipola","code":"Kla","km":"290+303","distanceFromPrevious":6.219,"cumulativeDistance":6.2,"type":"liikennepaikka"}],"Orivesi–Seinäjoki":[{"name":"Orivesi","code":"Ov","km":"228+276","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Orivesi keskusta","code":"Ovk","km":"231+512","distanceFromPrevious":3.235,"cumulativeDistance":3.2,"type":"seisake"},{"name":"Juupajoki","code":"Jj","km":"246+580","distanceFromPrevious":15.092,"cumulativeDistance":18.3,"type":"seisake"},{"name":"Korkeakoski","code":"Kas","km":"247+910","distanceFromPrevious":1.33,"cumulativeDistance":19.7,"type":"liikennepaikka"},{"name":"Vilppula","code":"Vlp","km":"274+760","distanceFromPrevious":26.867,"cumulativeDistance":46.5,"type":"liikennepaikka"},{"name":"Kolho","code":"Klo","km":"286+265","distanceFromPrevious":11.513,"cumulativeDistance":58.0,"type":"seisake"},{"name":"Haapamäki","code":"Hpk","km":"300+235","distanceFromPrevious":13.978,"cumulativeDistance":72.0,"type":"liikennepaikka"},{"name":"Pihlajavesi","code":"Ph","km":"312+500","distanceFromPrevious":12.261,"cumulativeDistance":84.3,"type":"liikennepaikka"},{"name":"Myllymäki","code":"My","km":"333+721","distanceFromPrevious":21.235,"cumulativeDistance":105.5,"type":"seisake"},{"name":"Eläinpuisto-Zoo","code":"Epz","km":"338+683","distanceFromPrevious":4.964,"cumulativeDistance":110.5,"type":"seisake"},{"name":"Inha","code":"In","km":"341+367","distanceFromPrevious":2.686,"cumulativeDistance":113.2,"type":"linjavaihde"},{"name":"Ähtäri","code":"Äht","km":"346+067","distanceFromPrevious":4.702,"cumulativeDistance":117.9,"type":"liikennepaikka"},{"name":"Tuuri","code":"Tuu","km":"366+962","distanceFromPrevious":20.903,"cumulativeDistance":138.8,"type":"seisake"},{"name":"Alavus","code":"Alv","km":"373+445","distanceFromPrevious":6.488,"cumulativeDistance":145.3,"type":"liikennepaikka"},{"name":"Niinimaa","code":"Nii","km":"383+155","distanceFromPrevious":9.719,"cumulativeDistance":155.0,"type":"linjavaihde"},{"name":"Seinäjoki tavara","code":"Skt","km":"416+580","distanceFromPrevious":33.501,"cumulativeDistance":188.5,"type":"liikennepaikan osa (SEINÄJOKI)"},{"name":"Seinäjoki asema","code":"Sk","km":"418+001","distanceFromPrevious":1.379,"cumulativeDistance":189.9,"type":"liikennepaikan osa (SEINÄJOKI)"}],"Haapamäki–Jyväskylä":[{"name":"Haapamäki","code":"Hpk","km":"300+235","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Keuruu","code":"Keu","km":"316+041","distanceFromPrevious":15.8,"cumulativeDistance":15.8,"type":"liikennepaikka"},{"name":"Kaleton","code":"Ktn","km":"320+875","distanceFromPrevious":4.834,"cumulativeDistance":20.6,"type":"linjavaihde"},{"name":"Petäjävesi","code":"Pvi","km":"343+357","distanceFromPrevious":22.475,"cumulativeDistance":43.1,"type":"liikennepaikka"},{"name":"Vesanka","code":"Vn","km":"364+469","distanceFromPrevious":21.134,"cumulativeDistance":64.2,"type":"liikennepaikka"},{"name":"Rautpohja","code":"Rph","km":"372+829","distanceFromPrevious":8.352,"cumulativeDistance":72.6,"type":"linjavaihde"},{"name":"Jyväskylä","code":"Jy","km":"377+435","distanceFromPrevious":4.595,"cumulativeDistance":77.2,"type":"liikennepaikka"}],"Jyväskylä–Pieksämäki":[{"name":"Jyväskylä","code":"Jy","km":"377+435","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Rauhalahti","code":"Rhl","km":"380+510","distanceFromPrevious":3.07,"cumulativeDistance":3.1,"type":"linjavaihde"},{"name":"Vaajakoski","code":"Vko","km":"384+866","distanceFromPrevious":4.356,"cumulativeDistance":7.4,"type":"liikennepaikka"},{"name":"Lievestuore","code":"Lvt","km":"402+191","distanceFromPrevious":17.304,"cumulativeDistance":24.7,"type":"liikennepaikka"},{"name":"Hankasalmi","code":"Hks","km":"418+089","distanceFromPrevious":15.898,"cumulativeDistance":40.6,"type":"liikennepaikka"},{"name":"Venetmäki","code":"Vki","km":"433+164","distanceFromPrevious":15.061,"cumulativeDistance":55.7,"type":"liikennepaikka"},{"name":"Naarajärvi","code":"Nri","km":"449+862","distanceFromPrevious":16.684,"cumulativeDistance":72.4,"type":"liikennepaikka"},{"name":"Pieksämäki asema","code":"Pm","km":"457+200","distanceFromPrevious":7.303,"cumulativeDistance":79.7,"type":"liikennepaikan osa (PIEKSÄMÄKI)"},{"name":"Pieksämäki Temu","code":"Tmu","km":"377+340","distanceFromPrevious":1.339,"cumulativeDistance":81.0,"type":"liikennepaikan osa (PIEKSÄMÄKI)"},{"name":"Pieksämäki lajittelu","code":"Pmla","km":"378+640","distanceFromPrevious":1.301,"cumulativeDistance":82.3,"type":"liikennepaikan osa (PIEKSÄMÄKI)"},{"name":"Pieksämäki tavara","code":"Pmt","km":"379+960","distanceFromPrevious":1.32,"cumulativeDistance":83.6,"type":"liikennepaikan osa (PIEKSÄMÄKI)"}],"Jyväskylä–Äänekoski":[{"name":"Jyväskylä","code":"Jy","km":"377+435","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Vihtavuori","code":"Vri","km":"395+230","distanceFromPrevious":17.803,"cumulativeDistance":17.8,"type":"liikennepaikka"},{"name":"Laukaa","code":"Lau","km":"401+193","distanceFromPrevious":5.964,"cumulativeDistance":23.8,"type":"liikennepaikka"},{"name":"Suolahti","code":"Suo","km":"417+796","distanceFromPrevious":16.904,"cumulativeDistance":40.7,"type":"liikennepaikka"},{"name":"Äänekoski","code":"Äki","km":"424+515","distanceFromPrevious":6.721,"cumulativeDistance":47.4,"type":"liikennepaikka"}],"Äänekoski–Haapajärvi":[{"name":"Äänekoski","code":"Äki","km":"424+515","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Saarijärvi","code":"Srj","km":"452+723","distanceFromPrevious":28.206,"cumulativeDistance":28.2,"type":"liikennepaikka"},{"name":"Kannonkoski","code":"Ksi","km":"488+694","distanceFromPrevious":35.972,"cumulativeDistance":64.2,"type":"liikennepaikka"},{"name":"Keitelepohja","code":"Ktp","km":"519+256","distanceFromPrevious":30.565,"cumulativeDistance":94.7,"type":"liikennepaikka"},{"name":"Pihtipudas","code":"Pp","km":"540+605","distanceFromPrevious":21.35,"cumulativeDistance":116.1,"type":"liikennepaikka"},{"name":"Haapajärvi","code":"Hpj","km":"588+460","distanceFromPrevious":47.848,"cumulativeDistance":163.9,"type":"liikennepaikka"}],"Iisalmi–Ylivieska":[{"name":"Iisalmi","code":"Ilm","km":"550+360","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Runni","code":"Rnn","km":"568+518","distanceFromPrevious":18.218,"cumulativeDistance":18.2,"type":"seisake"},{"name":"Kiuruvesi","code":"Krv","km":"583+985","distanceFromPrevious":15.484,"cumulativeDistance":33.7,"type":"liikennepaikka"},{"name":"Komu","code":"Kom","km":"607+174","distanceFromPrevious":23.222,"cumulativeDistance":56.9,"type":"linjavaihde"},{"name":"Pyhäkumpu erka-","code":"Pye","km":"613+511","distanceFromPrevious":6.34,"cumulativeDistance":63.3,"type":"liikennepaikka"},{"name":"Pyhäsalmi","code":"Phä","km":"615+934","distanceFromPrevious":2.423,"cumulativeDistance":65.7,"type":"liikennepaikka"},{"name":"Haapajärvi","code":"Hpj","km":"649+205","distanceFromPrevious":33.285,"cumulativeDistance":99.0,"type":"liikennepaikka"},{"name":"Nivala","code":"Nvl","km":"676+878","distanceFromPrevious":27.683,"cumulativeDistance":126.7,"type":"liikennepaikka"},{"name":"Ylivieska","code":"Yv","km":"704+485","distanceFromPrevious":27.61,"cumulativeDistance":154.3,"type":"liikennepaikka"}],"Pyhäkumpu erkanemisvaihde–Pyhäkumpu":[{"name":"Pyhäkumpu erka-","code":"Pye","km":"613+511","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Pyhäkumpu","code":"Pyk","km":"615+415","distanceFromPrevious":1.916,"cumulativeDistance":1.9,"type":"liikennepaikka"}],"Oulu–Laurila":[{"name":"Oulu Nokela","code":"Nok","km":"750+030","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (OULU)"},{"name":"Oulu tavara","code":"Olt","km":"751+360","distanceFromPrevious":1.328,"cumulativeDistance":1.3,"type":"liikennepaikan osa (OULU)"},{"name":"Oulu asema","code":"Ol","km":"752+778","distanceFromPrevious":1.424,"cumulativeDistance":2.8,"type":"liikennepaikan osa (OULU)"},{"name":"Oulu Tuira","code":"Tua","km":"755+510","distanceFromPrevious":2.61,"cumulativeDistance":5.4,"type":"liikennepaikan osa (OULU)"},{"name":"Haukipudas","code":"Hd","km":"775+159","distanceFromPrevious":19.58,"cumulativeDistance":24.9,"type":"liikennepaikka"},{"name":"Ii","code":"Ii","km":"789+165","distanceFromPrevious":13.956,"cumulativeDistance":38.9,"type":"liikennepaikka"},{"name":"Lähessuo","code":"Lhs","km":"798+473","distanceFromPrevious":9.287,"cumulativeDistance":48.2,"type":"liikennepaikka"},{"name":"Myllykangas","code":"Mys","km":"815+693","distanceFromPrevious":17.151,"cumulativeDistance":65.3,"type":"liikennepaikka"},{"name":"Simo","code":"Sim","km":"833+715","distanceFromPrevious":17.701,"cumulativeDistance":83.0,"type":"liikennepaikka"},{"name":"Maksniemi","code":"Mkn","km":"845+522","distanceFromPrevious":11.775,"cumulativeDistance":94.8,"type":"liikennepaikka"},{"name":"Kemi asema","code":"Kem","km":"858+300","distanceFromPrevious":12.707,"cumulativeDistance":107.5,"type":"liikennepaikan osa (KEMI)"},{"name":"Lautiosaari","code":"Li","km":"863+064","distanceFromPrevious":4.773,"cumulativeDistance":112.3,"type":"liikennepaikan osa (KEMI)"},{"name":"Laurila","code":"Lla","km":"865+776","distanceFromPrevious":2.71,"cumulativeDistance":115.0,"type":"liikennepaikka"},{"name":"Kemi asema","code":"Kem","km":"858+300","distanceFromPrevious":null,"cumulativeDistance":null,"type":"liikennepaikan osa (KEMI)"},{"name":"Kemi Sahansaari","code":"Shs","km":"861+275","distanceFromPrevious":2.978,"cumulativeDistance":3.0,"type":"liikennepaikan osa (KEMI)"}],"Kemi–Ajos":[{"name":"Kemi","code":"Kem","km":"858+300","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Ajos","code":"Ajo","km":"867+098","distanceFromPrevious":8.771,"cumulativeDistance":8.8,"type":"liikennepaikka"}],"Laurila–Tornio-raja":[{"name":"Laurila","code":"Lla","km":"865+776","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Tornio-Itäinen","code":"Tri","km":"883+307","distanceFromPrevious":17.512,"cumulativeDistance":17.5,"type":"seisake"},{"name":"Tornio asema","code":"Tor","km":"884+656","distanceFromPrevious":1.349,"cumulativeDistance":18.9,"type":"liikennepaikan osa (TORNIO)"},{"name":"Tornio-raja","code":"Trr","km":"887+190","distanceFromPrevious":2.586,"cumulativeDistance":21.4,"type":"liikennepaikan osa (TORNIO)"}],"Tornio–Röyttä":[{"name":"Tornio asema","code":"Tor","km":"884+656","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (TORNIO)"},{"name":"Röyttä","code":"Röy","km":"893+917","distanceFromPrevious":9.255,"cumulativeDistance":9.3,"type":"liikennepaikka"}],"Tornio–Kolari":[{"name":"Tornio asema","code":"Tor","km":"884+656","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (TORNIO)"},{"name":"Niemenpää","code":"Nmp","km":"923+605","distanceFromPrevious":38.592,"cumulativeDistance":38.6,"type":"liikennepaikka"},{"name":"Ylitornio","code":"Ytr","km":"946+041","distanceFromPrevious":22.426,"cumulativeDistance":61.0,"type":"seisake"},{"name":"Kaulinranta","code":"Klr","km":"963+350","distanceFromPrevious":17.294,"cumulativeDistance":78.3,"type":"liikennepaikka"},{"name":"Pello","code":"Pel","km":"1002+632","distanceFromPrevious":39.278,"cumulativeDistance":117.6,"type":"liikennepaikka"},{"name":"Sieppijärvi","code":"Spj","km":"1045+904","distanceFromPrevious":43.272,"cumulativeDistance":160.9,"type":"liikennepaikka"},{"name":"Kolari","code":"Kli","km":"1067+206","distanceFromPrevious":21.328,"cumulativeDistance":182.2,"type":"liikennepaikka"}],"Laurila–Kemijärvi":[{"name":"Laurila","code":"Lla","km":"865+776","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Törmä","code":"Tör","km":"878+075","distanceFromPrevious":12.283,"cumulativeDistance":12.3,"type":"liikennepaikka"},{"name":"Tervola","code":"Trv","km":"900+521","distanceFromPrevious":22.412,"cumulativeDistance":34.7,"type":"liikennepaikka"},{"name":"Koivu","code":"Kvu","km":"923+373","distanceFromPrevious":22.834,"cumulativeDistance":57.5,"type":"liikennepaikka"},{"name":"Muurola","code":"Mul","km":"948+494","distanceFromPrevious":25.122,"cumulativeDistance":82.7,"type":"liikennepaikka"},{"name":"Rovaniemi","code":"Roi","km":"971+775","distanceFromPrevious":23.282,"cumulativeDistance":105.9,"type":"liikennepaikka"},{"name":"Vaarala","code":"Vra","km":"981+481","distanceFromPrevious":9.649,"cumulativeDistance":115.6,"type":"linjavaihde"},{"name":"Misi","code":"Mis","km":"1021+255","distanceFromPrevious":39.776,"cumulativeDistance":155.4,"type":"liikennepaikka"},{"name":"Hanhikoski","code":"Hnh","km":"1047+083","distanceFromPrevious":25.833,"cumulativeDistance":181.2,"type":"linjavaihde"},{"name":"Kemijärvi","code":"Kjä","km":"1056+399","distanceFromPrevious":9.317,"cumulativeDistance":190.5,"type":"liikennepaikka"}],"Kemijärvi–Patokangas":[{"name":"Kemijärvi","code":"Kjä","km":"1056+399","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Patokangas","code":"Ptg","km":"1064+591","distanceFromPrevious":8.188,"cumulativeDistance":8.2,"type":"liikennepaikka"}],"Oulu–Kontiomäki":[{"name":"Oulu asema","code":"Ol","km":"752+778","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikan osa (OULU)"},{"name":"Oulu tavara","code":"Olt","km":"751+360","distanceFromPrevious":1.424,"cumulativeDistance":1.4,"type":"liikennepaikan osa (OULU)"},{"name":"Oulu Nokela","code":"Nok","km":"750+030","distanceFromPrevious":1.328,"cumulativeDistance":2.8,"type":"liikennepaikan osa (OULU)"},{"name":"Pikkarala","code":"Pkl","km":"771+765","distanceFromPrevious":16.353,"cumulativeDistance":19.1,"type":"liikennepaikka"},{"name":"Muhos","code":"Mh","km":"788+424","distanceFromPrevious":16.669,"cumulativeDistance":35.8,"type":"liikennepaikka"},{"name":"Hyrkäs","code":"Hyr","km":"800+442","distanceFromPrevious":12.013,"cumulativeDistance":47.8,"type":"liikennepaikka"},{"name":"Utajärvi","code":"Utj","km":"810+502","distanceFromPrevious":10.057,"cumulativeDistance":57.8,"type":"liikennepaikka"},{"name":"Niska","code":"Nsk","km":"825+300","distanceFromPrevious":14.791,"cumulativeDistance":72.6,"type":"liikennepaikka"},{"name":"Vaala","code":"Vaa","km":"844+671","distanceFromPrevious":19.361,"cumulativeDistance":92.0,"type":"liikennepaikka"},{"name":"Liminpuro","code":"Lmp","km":"864+792","distanceFromPrevious":20.115,"cumulativeDistance":112.1,"type":"liikennepaikka"},{"name":"Kivesjärvi","code":"Kvj","km":"878+146","distanceFromPrevious":13.352,"cumulativeDistance":125.5,"type":"liikennepaikka"},{"name":"Melalahti","code":"Mll","km":"893+280","distanceFromPrevious":15.13,"cumulativeDistance":140.6,"type":"liikennepaikka"},{"name":"Paltamo","code":"Pto","km":"901+579","distanceFromPrevious":8.303,"cumulativeDistance":148.9,"type":"liikennepaikka"},{"name":"Kuusikkoniemi","code":"Ksn","km":"906+763","distanceFromPrevious":4.952,"cumulativeDistance":153.8,"type":"liikennepaikka"},{"name":"Kontiomäki","code":"Kon","km":"918+911","distanceFromPrevious":12.158,"cumulativeDistance":166.0,"type":"liikennepaikka"}],"Kontiomäki–Ämmänsaari":[{"name":"Kontiomäki","code":"Kon","km":"658+786","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Ristijärvi","code":"Rjv","km":"676+804","distanceFromPrevious":18.02,"cumulativeDistance":18.0,"type":"liikennepaikka"},{"name":"Hyrynsalmi","code":"Hys","km":"704+601","distanceFromPrevious":27.804,"cumulativeDistance":45.8,"type":"liikennepaikka"},{"name":"Pesiökylä","code":"Psk","km":"732+752","distanceFromPrevious":28.156,"cumulativeDistance":74.0,"type":"liikennepaikka"},{"name":"Ämmänsaari","code":"Äm","km":"750+448","distanceFromPrevious":17.679,"cumulativeDistance":91.7,"type":"liikennepaikka"}],"Kontiomäki–Vartius-raja":[{"name":"Kontiomäki","code":"Kon","km":"658+786","distanceFromPrevious":null,"cumulativeDistance":0,"type":"liikennepaikka"},{"name":"Arola","code":"Aro","km":"707+668","distanceFromPrevious":48.895,"cumulativeDistance":48.9,"type":"liikennepaikka"},{"name":"Ypykkävaara","code":"Ypy","km":"729+780","distanceFromPrevious":22.112,"cumulativeDistance":71.0,"type":"liikennepaikka"},{"name":"Vartius","code":"Vus","km":"753+755","distanceFromPrevious":23.969,"cumulativeDistance":95.0,"type":"liikennepaikka"},{"name":"Vartius-raja","code":"Vur","km":"755+856","distanceFromPrevious":2.101,"cumulativeDistance":97.1,"type":"liikennepaikka"}]};
+
+const App = (() => {
+  const ALL_ROUTES_VALUE = '__ALL_ROUTES__';
+  const ALL_ROUTES_LABEL = 'Kaikki rataosuudet';
+  const API_BASE = 'https://rata.digitraffic.fi/api/v1';
+  // Selaimessa oma HTTP-header voi joissakin ympäristöissä aiheuttaa CORS-esitarkistuksen.
+  // Pidetään haku yksinkertaisena GET-pyyntönä, jotta GitHub Pages / iPad / iPhone toimivat varmemmin.
+  const MIN_DISTANCE_KM = 10;
+  const MIN_TIME_MINUTES = 6;
+  const MAX_PLAUSIBLE_AVERAGE_SPEED = 205;
+  // Karkea turvaraja junatyypeittäin. Varsinaista junakohtaista sn-tietoa ei
+  // aina löydy Digitrafficin junadatasta, joten tätä käytetään vain selvästi
+  // mahdottomien laskentatulosten suodattamiseen. Matkustajajunille sallitaan
+  // pieni marginaali yli sn 200 -tason, koska toteutunut keskinopeus voi pyöristyä
+  // muutaman km/h sen yli. S-junien poikkeus: Kerava–Hakosilta-radalla sn on 220.
+  const TRAIN_TYPE_PLAUSIBLE_MAX = {
+    T: 120,
+    VET: 120,
+    TYO: 100,
+    MV: 120,
+    HDM: 160,
+    HL: 160,
+    PYO: 160,
+    H: 205,
+    IC: 205,
+    S: 205,
+    P: 205
+  };
+  const PASSENGER_TRAIN_TYPES = new Set(['H','HDM','HL','HSM','IC','IC2','P','PYO','S']);
+  const ALL_KNOWN_TRAIN_TYPES = ['Kaikki junatyypit','H','HDM','HL','HLV','HSM','HV','IC','IC2','LIV','MUS','MUV','MV','P','PAI','PAR','PVS','PVV','PYO','RJ','S','SAA','T','TYO','V','VET','VEV','VLI','W'];
+  const trainCache = new Map();
+  const routeData = cleanRoutes(ROUTES);
+  const graphData = buildRailGraph(routeData);
+
+  const defaultTrainTypes = ALL_KNOWN_TRAIN_TYPES;
+  const trainRowIndexCache = new WeakMap();
+  const $ = id => document.getElementById(id);
+  const els = {};
+
+  function init() {
+    cacheEls();
+    initTheme();
+    fillRouteSelects();
+    fillNetworkPlaceSelectors();
+    fillTrainTypes(defaultTrainTypes);
+    fillSelect(els.printTrainType, defaultTrainTypes.filter(t => t !== 'Kaikki junatyypit').map(t => [t, t]));
+    restoreSelections(els.printTrainType, new Set(PASSENGER_TRAIN_TYPES));
+    setToday();
+    bindEvents();
+    applyPrintTypePreset({ target: els.printPassengerOnly });
+    updateDistanceSection();
+    calculateNetworkRoute();
+  }
+
+  function cacheEls() {
+    ['speedRouteSelect','printRouteSelect','routeSelect','fromSelect','toSelect','networkFromInput','networkToInput','viaPlaces','placeDatalist','networkRouteBtn','networkDistance','networkPlaceCount','networkLegCount','networkStatus','networkResult','speedDate','minSpeed','maxSpeed','trainType','printTrainType','printDirection','resultLimit','nationalLimit','passengerOnly','actualOnly','sustainedOnly','searchBtn','nationalBtn','buildPrintBtn','printPdfBtn','printStartDate','printEndDate','printPassengerOnly','printFreightOnly','printActualTimes','printStatus','printTable','statTrains','statSegments','statFastest','speedStatus','results','trueDistance','kmDistance','distanceDiff','distanceStatus','routeTable'].forEach(id => els[id] = $(id));
+  }
+
+  function initTheme() {
+    const saved = localStorage.getItem('rnl_theme') || 'dark';
+    document.querySelectorAll('[data-theme]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.theme === saved);
+      btn.addEventListener('click', () => {
+        const choice = btn.dataset.theme;
+        localStorage.setItem('rnl_theme', choice);
+        if (choice === 'light') document.documentElement.setAttribute('data-theme','light');
+        else if (choice === 'auto') document.documentElement.removeAttribute('data-theme');
+        else document.documentElement.setAttribute('data-theme','dark');
+        document.querySelectorAll('[data-theme]').forEach(b => b.classList.toggle('active', b.dataset.theme === choice));
+      });
+    });
+  }
+
+  function bindEvents() {
+    els.routeSelect.addEventListener('change', updateDistanceSection);
+    els.fromSelect.addEventListener('change', updateDistanceCards);
+    els.toSelect.addEventListener('change', updateDistanceCards);
+    els.searchBtn.addEventListener('click', runSearch);
+    els.nationalBtn.addEventListener('click', runNationalSearch);
+    els.buildPrintBtn.addEventListener('click', buildPrintableList);
+    els.printPdfBtn.addEventListener('click', printSelectedRows);
+    els.printRouteSelect.addEventListener('change', updatePrintDirectionOptions);
+    if (els.printPassengerOnly) els.printPassengerOnly.addEventListener('change', applyPrintTypePreset);
+    if (els.printFreightOnly) els.printFreightOnly.addEventListener('change', applyPrintTypePreset);
+    els.networkRouteBtn.addEventListener('click', calculateNetworkRoute);
+    els.networkFromInput.addEventListener('change', calculateNetworkRoute);
+    els.networkToInput.addEventListener('change', calculateNetworkRoute);
+    setupEditablePlaceInput(els.networkFromInput);
+    setupEditablePlaceInput(els.networkToInput);
+  }
+
+  function setupEditablePlaceInput(input) {
+    if (!input) return;
+    const clearForTyping = () => {
+      // Lähtö- ja määräpaikan oletusarvo on vain ehdotus. Kun käyttäjä
+      // alkaa muokata kenttää, tyhjennetään kenttä, jotta vanhaa arvoa
+      // ei tarvitse poistaa käsin.
+      if (!input.dataset.userEdited) {
+        input.value = '';
+        input.dataset.userEdited = '1';
+      }
+    };
+    input.addEventListener('focus', clearForTyping);
+    input.addEventListener('pointerdown', clearForTyping);
+  }
+
+  function cleanRoutes(routes) {
+    const exclude = {
+      'Helsinki–Riihimäki': ['Pau', 'Pslt'],
+      'Kouvola–Pieksämäki': ['Kuv', 'Kvt', 'Kvla']
+    };
+    const cleaned = {};
+    for (const [name, original] of Object.entries(routes || {})) {
+      const banned = new Set((exclude[name] || []).map(normCode));
+      const filtered = (original || []).filter(p => !banned.has(normCode(p.code)));
+      cleaned[name] = normalizeRoute(filtered);
+    }
+    return cleaned;
+  }
+
+  function normalizeRoute(route) {
+    const out = [];
+    const seen = new Set();
+    let cumulative = 0;
+    for (let i = 0; i < route.length; i++) {
+      const src = route[i];
+      const code = normCode(src.code);
+      if (i > 0 && seen.has(code)) break; // uusi haaran alku tai sama paikka uudelleen
+      const item = { ...src };
+      if (out.length === 0) {
+        item.distanceFromPrevious = null;
+        item.cumulativeDistance = 0;
+        out.push(item);
+        if (code) seen.add(code);
+        continue;
+      }
+      let d = Number(item.distanceFromPrevious);
+      if (!Number.isFinite(d) || d <= 0) {
+        const prevKm = parseKm(out[out.length - 1].km);
+        const curKm = parseKm(item.km);
+        const kmDiff = Math.abs(curKm - prevKm);
+        // Paikataan vain selvästi samaan linjaan kuuluva lyhyt puuttuva väli.
+        // Muut null-välit ovat yleensä sivuhaaran tai vaihtoehtoisen kulkutien alkuja.
+        if (Number.isFinite(kmDiff) && kmDiff > 0 && kmDiff < 5) d = kmDiff;
+        else break;
+      }
+      cumulative += d;
+      item.distanceFromPrevious = d;
+      item.cumulativeDistance = cumulative;
+      out.push(item);
+      if (code) seen.add(code);
+    }
+    return out;
+  }
+
+  function makeReverseRoute(route) {
+    const reversed = [];
+    for (let i = route.length - 1; i >= 0; i--) {
+      const item = { ...route[i] };
+      const nextOriginal = route[i + 1];
+      item.distanceFromPrevious = reversed.length === 0 ? null : Number(nextOriginal && nextOriginal.distanceFromPrevious);
+      reversed.push(item);
+    }
+    let cumulative = 0;
+    for (let i = 0; i < reversed.length; i++) {
+      if (i === 0) reversed[i].cumulativeDistance = 0;
+      else {
+        const d = Number(reversed[i].distanceFromPrevious);
+        if (!Number.isFinite(d) || d <= 0) reversed[i].distanceFromPrevious = null;
+        cumulative += Number(reversed[i].distanceFromPrevious) || 0;
+        reversed[i].cumulativeDistance = cumulative;
+      }
+    }
+    return reversed;
+  }
+
+  function getSortedRouteNames() {
+    return Object.keys(routeData).sort((a, b) =>
+      a.localeCompare(b, 'fi', { sensitivity: 'base' })
+    );
+  }
+
+  function fillRouteSelects() {
+    const names = getSortedRouteNames();
+    const routeOptions = names.map(name => [name, name]);
+    const speedOptions = [[ALL_ROUTES_VALUE, ALL_ROUTES_LABEL], ...routeOptions];
+    fillSelect(els.speedRouteSelect, speedOptions);
+    fillSelect(els.routeSelect, routeOptions);
+    fillSelect(els.printRouteSelect, routeOptions);
+    const preferred = names.includes('Helsinki–Riihimäki') ? 'Helsinki–Riihimäki' : names[0];
+    els.speedRouteSelect.value = preferred;
+    els.routeSelect.value = preferred;
+    els.printRouteSelect.value = preferred;
+    updatePrintDirectionOptions();
+  }
+
+
+  function allNetworkPlaces() {
+    const byCode = new Map();
+    for (const route of Object.values(routeData)) {
+      for (const p of route) {
+        const code = normCode(p.code);
+        if (!code || byCode.has(code)) continue;
+        byCode.set(code, { code, name: p.name || code });
+      }
+    }
+    return Array.from(byCode.values()).sort((a,b) => {
+      const an = `${a.name} ${a.code}`;
+      const bn = `${b.name} ${b.code}`;
+      return an.localeCompare(bn, 'fi', { sensitivity: 'base' });
+    });
+  }
+
+  function fillNetworkPlaceSelectors() {
+    const places = allNetworkPlaces();
+    els.placeDatalist.innerHTML = '';
+    for (const p of places) {
+      for (const value of [`${p.name} (${p.code})`, p.name, p.code]) {
+        const opt = document.createElement('option');
+        opt.value = value;
+        els.placeDatalist.appendChild(opt);
+      }
+    }
+    const from = places.find(p => p.code === 'HKI') || places[0];
+    const to = places.find(p => p.code === 'OL') || places[places.length - 1];
+    if (from) els.networkFromInput.value = `${from.name} (${from.code})`;
+    if (to) els.networkToInput.value = `${to.name} (${to.code})`;
+  }
+
+  function buildRailGraph(routes) {
+    const nodes = new Map();
+    const adj = new Map();
+    const addNode = p => {
+      const code = normCode(p.code);
+      if (!code) return null;
+      if (!nodes.has(code)) nodes.set(code, { code, name: p.name || code });
+      if (!adj.has(code)) adj.set(code, []);
+      return code;
+    };
+    const addEdge = (a, b, d, routeName) => {
+      if (!a || !b || a === b || !Number.isFinite(d) || d <= 0) return;
+      const pushMin = (from, to) => {
+        const list = adj.get(from) || [];
+        const old = list.find(e => e.to === to);
+        if (!old) list.push({ to, distance: d, routeName });
+        else if (d < old.distance) { old.distance = d; old.routeName = routeName; }
+        adj.set(from, list);
+      };
+      pushMin(a, b);
+      pushMin(b, a);
+    };
+    for (const [routeName, route] of Object.entries(routes)) {
+      for (const p of route) addNode(p);
+      for (let i = 1; i < route.length; i++) {
+        const a = addNode(route[i - 1]);
+        const b = addNode(route[i]);
+        const d = Number(route[i].distanceFromPrevious);
+        addEdge(a, b, d, routeName);
+      }
+    }
+    return { nodes, adj };
+  }
+
+  function resolvePlaceToken(token) {
+    const raw = String(token || '').trim();
+    if (!raw) return null;
+    const code = normCode(raw.replace(/^.*\(([^)]+)\).*$/, '$1'));
+    if (graphData.nodes.has(code)) return code;
+    const normName = normalizeText(raw);
+    const matches = [];
+    for (const node of graphData.nodes.values()) {
+      if (normalizeText(node.name) === normName || normalizeText(`${node.name} (${node.code})`) === normName) matches.push(node.code);
+    }
+    if (matches.length === 1) return matches[0];
+    for (const node of graphData.nodes.values()) {
+      if (normalizeText(node.name).includes(normName)) matches.push(node.code);
+    }
+    return matches.length === 1 ? matches[0] : null;
+  }
+
+  function normalizeText(s) {
+    return String(s || '').trim().toLocaleLowerCase('fi-FI').replace(/\s+/g, ' ');
+  }
+
+  function calculateNetworkRoute() {
+    const start = resolvePlaceToken(els.networkFromInput.value);
+    const end = resolvePlaceToken(els.networkToInput.value);
+    const viaRaw = els.viaPlaces.value || '';
+    const viaTokens = viaRaw.split(',').map(s => s.trim()).filter(Boolean);
+    const viaCodes = [];
+    for (const token of viaTokens) {
+      const code = resolvePlaceToken(token);
+      if (!code) {
+        renderNetworkError(`Kauttakulkupaikkaa ”${token}” ei tunnistettu yksiselitteisesti. Käytä tarvittaessa liikennepaikan lyhennettä.`);
+        return;
+      }
+      viaCodes.push(code);
+    }
+    const targets = [start, ...viaCodes, end];
+    if (!start || !end || start === end) {
+      renderNetworkError('Valitse kaksi eri liikennepaikkaa.');
+      return;
+    }
+
+    let total = 0;
+    const legs = [];
+    let fullPath = [];
+    const allSections = [];
+
+    for (let i = 0; i < targets.length - 1; i++) {
+      const leg = shortestPath(targets[i], targets[i + 1]);
+      if (!leg) {
+        renderNetworkError(`Reittiä välille ${placeLabel(targets[i])} – ${placeLabel(targets[i + 1])} ei löytynyt.`);
+        return;
+      }
+
+      const sections = summarizeEdgesByRoute(leg.edges);
+      total += leg.distance;
+      legs.push({
+        from: targets[i],
+        to: targets[i + 1],
+        distance: leg.distance,
+        path: leg.path,
+        edges: leg.edges,
+        sections
+      });
+      allSections.push(...sections);
+
+      if (!fullPath.length) fullPath = leg.path.slice();
+      else fullPath.push(...leg.path.slice(1));
+    }
+
+    renderNetworkRoute({ total, path: fullPath, legs, viaCodes, sections: allSections });
+  }
+
+  function shortestPath(start, goal) {
+    if (!graphData.nodes.has(start) || !graphData.nodes.has(goal)) return null;
+    const dist = new Map([[start, 0]]);
+    const prev = new Map();
+    const visited = new Set();
+    const queue = [{ code: start, d: 0 }];
+    while (queue.length) {
+      queue.sort((a,b) => a.d - b.d);
+      const cur = queue.shift();
+      if (visited.has(cur.code)) continue;
+      visited.add(cur.code);
+      if (cur.code === goal) break;
+      for (const edge of graphData.adj.get(cur.code) || []) {
+        if (visited.has(edge.to)) continue;
+        const nd = cur.d + edge.distance;
+        if (nd < (dist.get(edge.to) ?? Infinity)) {
+          dist.set(edge.to, nd);
+          prev.set(edge.to, { from: cur.code, edge: { ...edge, from: cur.code } });
+          queue.push({ code: edge.to, d: nd });
+        }
+      }
+    }
+    if (!dist.has(goal)) return null;
+
+    const path = [];
+    const edges = [];
+    let cur = goal;
+    while (cur) {
+      path.push(cur);
+      if (cur === start) break;
+      const step = prev.get(cur);
+      if (!step) return null;
+      edges.push({ from: step.from, to: cur, distance: step.edge.distance, routeName: step.edge.routeName });
+      cur = step.from;
+    }
+    path.reverse();
+    edges.reverse();
+    return { distance: dist.get(goal), path, edges };
+  }
+
+  function renderNetworkError(text) {
+    els.networkDistance.textContent = '–';
+    els.networkPlaceCount.textContent = '–';
+    els.networkLegCount.textContent = '–';
+    els.networkStatus.className = 'status error';
+    els.networkStatus.textContent = text;
+    els.networkResult.innerHTML = '';
+  }
+
+  function renderNetworkRoute(result) {
+    els.networkDistance.textContent = fmt(result.total, 1) + ' km';
+    els.networkPlaceCount.textContent = String(result.sections.length);
+    els.networkLegCount.textContent = String(result.legs.length);
+    els.networkStatus.className = 'status';
+    const viaText = result.viaCodes.length
+      ? ` Reitti on pakotettu kulkemaan kauttakulkupaikkojen ${result.viaCodes.map(placeLabel).join(' → ')} kautta.`
+      : ' Reitti on lyhin tunnettu reitti rataverkkograafin perusteella.';
+    els.networkStatus.textContent = 'Laskenta perustuu peräkkäisten liikennepaikkojen todellisiin välimatkoihin.' + viaText;
+
+    const sectionsHtml = result.legs.map((leg, i) => {
+      const heading = result.legs.length > 1
+        ? `<div class="muted" style="margin-top:${i ? '12px' : '0'};"><strong>Osamatka ${i + 1}: ${escapeHtml(placeLabel(leg.from))} – ${escapeHtml(placeLabel(leg.to))}, ${fmt(leg.distance,1)} km</strong></div>`
+        : '';
+      const list = leg.sections.map(sec => `<li><strong>${escapeHtml(sec.routeName)}</strong>: ${escapeHtml(placeLabel(sec.from))} – ${escapeHtml(placeLabel(sec.to))}, <strong>${fmt(sec.distance,1)} km</strong></li>`).join('');
+      return `${heading}<ul class="muted">${list}</ul>`;
+    }).join('');
+
+    const routeNote = result.legs.length > 1
+      ? '<p class="muted">Kauttakulkupaikkojen vuoksi sama rataosa voi esiintyä useammassa osamatkassa. Sitä ei yhdistetä jälkikäteen, jotta esimerkiksi Seinäjoki–Tampere–Seinäjoki-tyyppinen pakotettu kierto ei muutu virheellisesti yhdeksi Seinäjoki–Seinäjoki-jaksoksi.</p>'
+      : '';
+
+    els.networkResult.innerHTML = `<div class="result"><div class="result-title">Kilometrilaskelma on koostettu näistä rataosajaksoista</div>${sectionsHtml}${routeNote}</div>`;
+  }
+
+  function summarizeEdgesByRoute(edges) {
+    const sections = [];
+    for (const edge of edges) {
+      const routeName = edge.routeName || 'Tuntematon rataosa';
+      const last = sections[sections.length - 1];
+      if (last && last.routeName === routeName) {
+        last.to = edge.to;
+        last.distance += edge.distance;
+      } else {
+        sections.push({ routeName, from: edge.from, to: edge.to, distance: edge.distance });
+      }
+    }
+    return sections;
+  }
+
+  function summarizeRouteSections(path) {
+    const edges = [];
+    for (let i = 0; i < path.length - 1; i++) {
+      const from = path[i];
+      const to = path[i + 1];
+      const edge = (graphData.adj.get(from) || []).find(e => e.to === to);
+      if (edge) edges.push({ from, to, distance: edge.distance, routeName: edge.routeName });
+    }
+    return summarizeEdgesByRoute(edges);
+  }
+
+  function placeLabel(code) {
+    const node = graphData.nodes.get(normCode(code));
+    return node ? `${node.name} (${node.code})` : code;
+  }
+
+  function fillTrainTypes(types) {
+    if (!els.trainType) return;
+    const unique = Array.from(new Set(types.filter(Boolean)));
+    if (!unique.includes('Kaikki junatyypit')) unique.unshift('Kaikki junatyypit');
+    fillSelect(els.trainType, unique.map(t => [t, t]));
+  }
+
+  function fillSelect(select, pairs) {
+    if (!select) return;
+    select.innerHTML = '';
+    for (const [value, text] of pairs) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = text;
+      select.appendChild(option);
+    }
+  }
+
+  function setToday() {
+    const d = new Date();
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,10);
+    els.speedDate.value = local;
+    if (els.printStartDate) els.printStartDate.value = local;
+    if (els.printEndDate) els.printEndDate.value = local;
+  }
+
+  async function fetchTrains(date) {
+    if (trainCache.has(date)) return trainCache.get(date);
+    if (!date) throw new Error('Valitse päivä.');
+
+    // Ensisijainen Digitraffic-kutsu. Toinen URL on varmistus siltä varalta,
+    // että rajapinnan reititys muuttuu tai selain käsittelee polkua poikkeavasti.
+    const urls = [
+      `${API_BASE}/trains/${encodeURIComponent(date)}`,
+      `${API_BASE}/trains?departure_date=${encodeURIComponent(date)}`
+    ];
+
+    let lastError = null;
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { method: 'GET', mode: 'cors' });
+        if (!res.ok) {
+          lastError = new Error(`Digitraffic vastasi HTTP ${res.status}`);
+          continue;
+        }
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+          lastError = new Error('Digitraffic palautti odottamattoman vastauksen.');
+          continue;
+        }
+        trainCache.set(date, data);
+        return data;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    throw lastError || new Error('Junatietojen haku epäonnistui.');
+  }
+
+  function trainLabel(train) {
+    const type = train.trainType || '';
+    const number = train.trainNumber || '';
+    return `${type} ${number}`.trim() || 'Juna';
+  }
+
+  function trainEndpointRows(train) {
+    const rows = (train && Array.isArray(train.timeTableRows)) ? train.timeTableRows : [];
+    const usable = rows.filter(r => r && r.stationShortCode);
+    if (!usable.length) return { first:null, last:null };
+    const commercial = usable.filter(r => r.commercialStop === true || r.trainStopping === true);
+    const source = commercial.length >= 2 ? commercial : usable;
+    return { first: source[0] || null, last: source[source.length - 1] || null };
+  }
+
+  function trainEndpointCodes(train) {
+    const endpoints = trainEndpointRows(train);
+    return {
+      start: endpoints.first ? normCode(endpoints.first.stationShortCode) : '',
+      end: endpoints.last ? normCode(endpoints.last.stationShortCode) : ''
+    };
+  }
+
+  function trainRouteMetaForHeader(train, selectedRoute) {
+    const codes = trainEndpointCodes(train);
+    if (!codes.start || !codes.end || !Array.isArray(selectedRoute) || !selectedRoute.length) return '';
+    const routeCodes = new Set(selectedRoute.map(p => normCode(p.code)).filter(Boolean));
+    const startOutside = !routeCodes.has(codes.start);
+    const endOutside = !routeCodes.has(codes.end);
+    if (!startOutside && !endOutside) return '';
+    const start = displayCode(codes.start);
+    const end = displayCode(codes.end);
+    return start && end ? `${start}–${end}` : '';
+  }
+
+  function displayCode(code) {
+    const wanted = normCode(code);
+    if (!wanted) return '';
+    for (const route of Object.values(routeData)) {
+      const place = (route || []).find(p => normCode(p.code) === wanted);
+      if (place && place.code) return String(place.code);
+    }
+    return String(code);
+  }
+
+  function isPassengerTrain(train) {
+    const type = String(train && train.trainType || '').trim().toUpperCase();
+    return PASSENGER_TRAIN_TYPES.has(type);
+  }
+
+  function selectedValues(select) {
+    if (!select) return [];
+    return Array.from(select.selectedOptions || []).map(o => o.value).filter(Boolean);
+  }
+
+  function trainMatchesType(train, selectedType, passengerOnly = false) {
+    const type = String(train && train.trainType || '').trim().toUpperCase();
+    const selected = Array.isArray(selectedType) ? selectedType : (selectedType ? [selectedType] : []);
+    const normalized = selected.map(v => String(v || '').trim().toUpperCase()).filter(Boolean);
+    const hasExplicitTypeSelection = normalized.length && !normalized.includes('KAIKKI JUNATYYPIT');
+
+    // Jos käyttäjä valitsee junatyypin käsin, kunnioitetaan valintaa myös silloin,
+    // kun oletuksena päällä oleva matkustajajunarajaus on jäänyt päälle. Tämä korjaa
+    // museojunien, kuten MUS-tyypin PoRhan lättäjunien, putoamisen tulosteesta.
+    if (hasExplicitTypeSelection) return normalized.includes(type);
+
+    if (passengerOnly && !isPassengerTrain(train)) return false;
+    return true;
+  }
+
+  function rowTime(row, actualOnly) {
+    if (!row) return null;
+    if (actualOnly) {
+      if (!row.actualTime) return null;
+      return { ms: Date.parse(row.actualTime), source: 'toteutunut' };
+    }
+    if (row.actualTime) return { ms: Date.parse(row.actualTime), source: 'toteutunut' };
+    if (row.liveEstimateTime) return { ms: Date.parse(row.liveEstimateTime), source: 'arvio' };
+    if (row.scheduledTime) return { ms: Date.parse(row.scheduledTime), source: 'aikataulu' };
+    return null;
+  }
+
+  function normCode(value) {
+    return String(value || '').trim().toLocaleUpperCase('fi-FI');
+  }
+
+  function getTrainRowIndex(train, actualOnly) {
+    let cached = trainRowIndexCache.get(train);
+    if (!cached) {
+      cached = { all: null, actual: null };
+      trainRowIndexCache.set(train, cached);
+    }
+    const key = actualOnly ? 'actual' : 'all';
+    if (cached[key]) return cached[key];
+
+    const map = new Map();
+    for (const [idx, row] of (train.timeTableRows || []).entries()) {
+      const code = normCode(row.stationShortCode);
+      if (!code) continue;
+      const time = rowTime(row, actualOnly);
+      if (!time || !Number.isFinite(time.ms)) continue;
+      if (!map.has(code)) map.set(code, []);
+      map.get(code).push({ row, time, idx });
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.idx - b.idx || a.time.ms - b.time.ms);
+    }
+    cached[key] = map;
+    return map;
+  }
+
+  function rowsForCode(train, code, actualOnly) {
+    return getTrainRowIndex(train, actualOnly).get(normCode(code)) || [];
+  }
+
+  function bestTimedPair(train, startCode, endCode, actualOnly) {
+    const starts = rowsForCode(train, startCode, actualOnly);
+    const ends = rowsForCode(train, endCode, actualOnly);
+    if (!starts.length || !ends.length) return null;
+
+    // Digitraffic voi sisältää samalle liikennepaikalle sekä ARRIVAL- että
+    // DEPARTURE-rivin. Aiempi versio valitsi käytännössä lyhyimmän mahdollisen
+    // aikavälin, mikä vääristi keskinopeuksia etenkin lähellä määränpäätä.
+    // Nyt pari valitaan junan aikataulurivien järjestyksen mukaan: lähtörivin
+    // on oltava ennen määräriviä, ja lähtöön suositaan DEPARTURE-riviä sekä
+    // määräpaikkaan ARRIVAL-riviä.
+    const candidates = [];
+    for (const s of starts) {
+      for (const e of ends) {
+        if (typeof s.idx === 'number' && typeof e.idx === 'number' && e.idx <= s.idx) continue;
+        if (e.time.ms <= s.time.ms) continue;
+        const minutes = (e.time.ms - s.time.ms) / 60000;
+        if (minutes <= 0) continue;
+        candidates.push({ start: s, end: e, minutes });
+      }
+    }
+    if (!candidates.length) return null;
+    candidates.sort((a, b) =>
+      rowPref(a.start.row, 'start') - rowPref(b.start.row, 'start') ||
+      a.start.idx - b.start.idx ||
+      rowPref(a.end.row, 'end') - rowPref(b.end.row, 'end') ||
+      a.end.idx - b.end.idx ||
+      a.minutes - b.minutes
+    );
+    return candidates[0];
+  }
+
+  function rowPref(row, role) {
+    if (role === 'start') return row.type === 'DEPARTURE' ? 0 : 1;
+    return row.type === 'ARRIVAL' ? 0 : 1;
+  }
+
+  function analyzeRoute(trains, routeName, opts) {
+    const route = routeData[routeName] || [];
+    const reverseRoute = makeReverseRoute(route);
+    const all = [];
+    for (const train of trains) {
+      if (!trainMatchesType(train, opts.trainType, opts.passengerOnly)) continue;
+      all.push(...analyzeTrainOnRoute(train, routeName, route, opts, false));
+      all.push(...analyzeTrainOnRoute(train, routeName, reverseRoute, opts, true));
+    }
+    markSuspicious(all);
+    return all.sort((a,b) => b.speed - a.speed);
+  }
+
+  function analyzeTrainOnRoute(train, routeName, route, opts, reversed) {
+    if (!Array.isArray(route) || route.length < 2) return [];
+    if (opts.sustainedOnly) return analyzeSustainedTrain(train, routeName, route, opts, reversed);
+
+    const rowIndex = getTrainRowIndex(train, opts.actualOnly);
+    let routeHits = 0;
+    for (const p of route) {
+      if (rowIndex.has(normCode(p.code))) routeHits++;
+      if (routeHits >= 2) break;
+    }
+    if (routeHits < 2) return [];
+
+    const out = [];
+    for (let i = 0; i < route.length - 1; i++) {
+      if (!rowIndex.has(normCode(route[i].code))) continue;
+      let distance = 0;
+      for (let j = i + 1; j < route.length; j++) {
+        distance += segmentDistance(route, j);
+        if (distance <= MIN_DISTANCE_KM) continue;
+        if (!rowIndex.has(normCode(route[j].code))) continue;
+        const timed = bestTimedPair(train, route[i].code, route[j].code, opts.actualOnly);
+        if (!timed) continue;
+        if (timed.minutes < MIN_TIME_MINUTES) continue;
+        const speed = distance / (timed.minutes / 60);
+        if (!passesSpeedFilter(speed, opts.minSpeed, opts.maxSpeed, train, routeName)) continue;
+        out.push(makeResult(train, routeName, route[i], route[j], distance, timed, speed, reversed));
+        break;
+      }
+    }
+    return out;
+  }
+
+  function analyzeSustainedTrain(train, routeName, route, opts, reversed) {
+    const edges = [];
+    for (let i = 0; i < route.length - 1; i++) {
+      const distance = segmentDistance(route, i + 1);
+      if (!distance) continue;
+      const rowIndex = getTrainRowIndex(train, opts.actualOnly);
+      if (!rowIndex.has(normCode(route[i].code)) || !rowIndex.has(normCode(route[i+1].code))) continue;
+      const timed = bestTimedPair(train, route[i].code, route[i+1].code, opts.actualOnly);
+      if (!timed) continue;
+      const speed = distance / (timed.minutes / 60);
+      edges.push({ i, speed, distance, timed });
+    }
+    const runs = [];
+    let cur = [];
+    for (const edge of edges) {
+      if (passesSpeedFilter(edge.speed, opts.minSpeed, opts.maxSpeed, train, routeName)) cur.push(edge);
+      else { if (cur.length >= 3) runs.push(cur); cur = []; }
+    }
+    if (cur.length >= 3) runs.push(cur);
+    return runs.map(run => {
+      const first = run[0];
+      const last = run[run.length - 1];
+      const distance = run.reduce((sum,e) => sum + e.distance, 0);
+      if (distance <= MIN_DISTANCE_KM) return null;
+      const timed = {
+        start: first.timed.start,
+        end: last.timed.end,
+        minutes: (last.timed.end.time.ms - first.timed.start.time.ms) / 60000
+      };
+      if (timed.minutes <= 0) return null;
+      if (timed.minutes < MIN_TIME_MINUTES) return null;
+      const speed = distance / (timed.minutes / 60);
+      if (!passesSpeedFilter(speed, opts.minSpeed, opts.maxSpeed, train, routeName)) return null;
+      const result = makeResult(train, routeName, route[first.i], route[last.i + 1], distance, timed, speed, reversed);
+      result.note = `Korkean nopeuden jakso ${run.length} peräkkäisellä liikennepaikkavälillä.`;
+      return result;
+    }).filter(Boolean);
+  }
+
+  function segmentDistance(route, idx) {
+    const place = route[idx];
+    const d = Number(place && place.distanceFromPrevious);
+    return Number.isFinite(d) && d > 0 ? d : 0;
+  }
+
+  function plausibleMaxForTrain(train, routeName) {
+    const type = String(train && train.trainType || '').trim().toUpperCase();
+    const route = String(routeName || '');
+    if (type === 'S' && route === 'Kerava–Hakosilta') return 225;
+    return TRAIN_TYPE_PLAUSIBLE_MAX[type] || MAX_PLAUSIBLE_AVERAGE_SPEED;
+  }
+
+  function passesSpeedFilter(speed, min, max, train, routeName) {
+    if (!Number.isFinite(speed)) return false;
+    const plausibleMax = plausibleMaxForTrain(train, routeName);
+    if (speed > plausibleMax) return false;
+    if (Number.isFinite(min) && speed < min) return false;
+    if (Number.isFinite(max) && speed > max) return false;
+    return true;
+  }
+
+  function makeResult(train, routeName, from, to, distance, timed, speed, reversed) {
+    return {
+      train, routeName, from, to, distance, timed, speed, reversed,
+      key: `${routeName}|${normCode(from.code)}|${normCode(to.code)}`,
+      note: 'Keskinopeus laskettu yli 10 kilometrin ja vähintään 6 minuutin jaksolta.'
+    };
+  }
+
+  function markSuspicious(results) {
+    const groups = new Map();
+    for (const r of results) {
+      if (!groups.has(r.key)) groups.set(r.key, []);
+      groups.get(r.key).push(r);
+    }
+    for (const list of groups.values()) {
+      list.sort((a,b) => b.speed - a.speed);
+      if (list.length >= 2 && list[0].speed > list[1].speed * 1.2) list[0].suspicious = true;
+    }
+  }
+
+
+  function routeResultsFromTrains(trains, routeName, opts) {
+    return analyzeRoute(trains, routeName, opts);
+  }
+
+  async function runNationalSearch() {
+    els.nationalBtn.disabled = true;
+    els.nationalBtn.textContent = 'Haetaan…';
+    try {
+      clearResults();
+      const opts = readSearchOptions();
+      els.speedStatus.className = 'status';
+      els.speedStatus.textContent = 'Haetaan koko maan junatietoja…';
+      const trains = await fetchTrains(opts.date);
+      updateTrainTypesFromTrains(trains);
+      els.speedStatus.textContent = `Haettu ${trains.length} junaa. Lasketaan rataosien nopeimmat osumat…`;
+      const perRoute = [];
+      const detailsByRoute = new Map();
+      for (const routeName of getSortedRouteNames()) {
+        const routeOpts = { ...opts, routeName };
+        const results = routeResultsFromTrains(trains, routeName, routeOpts);
+        if (!results.length) continue;
+        results.sort((a,b) => b.speed - a.speed);
+        perRoute.push(results[0]);
+        detailsByRoute.set(routeName, results.slice(1, 11));
+      }
+      perRoute.sort((a,b) => b.speed - a.speed);
+      markSuspicious(perRoute);
+      const shown = perRoute.slice(0, opts.nationalLimit);
+      updateStats(perRoute, shown, 'Koko maa');
+      renderNationalResults(shown, detailsByRoute);
+      const capText = Number.isFinite(opts.maxSpeed) ? `${fmt(opts.minSpeed,0)}–${fmt(opts.maxSpeed,0)} km/h` : `vähintään ${fmt(opts.minSpeed,0)} km/h`;
+      els.speedStatus.textContent = `Koko maan haku: näytetään enintään ${opts.nationalLimit} nopeinta rataosakohtaista osumaa. Jokaiselta rataosalta näytetään ensin nopein juna; saman rataosan muut osumat saa auki +/Lisätiedot-kohdasta. Rajaus: ${capText}${opts.passengerOnly ? ', vain matkustajajunat' : ''}.`;
+    } catch (err) {
+      els.speedStatus.className = 'status error';
+      els.speedStatus.textContent = 'Koko maan haku epäonnistui: ' + (err && err.message ? err.message : String(err));
+    } finally {
+      els.nationalBtn.disabled = false;
+      els.nationalBtn.textContent = 'Hae koko maan nopeimmat';
+    }
+  }
+
+  function renderNationalResults(results, detailsByRoute) {
+    els.results.innerHTML = '';
+    if (!results.length) {
+      els.results.innerHTML = '<div class="result"><strong>Ei osumia.</strong><div class="muted">Kokeile pienempää vähimmäiskeskinopeutta tai poista rajauksia.</div></div>';
+      return;
+    }
+    for (const r of results) {
+      const div = document.createElement('div');
+      div.className = 'result';
+      const timeText = `${formatTimeWithSeconds(r.timed.start.time.ms)}–${formatTimeWithSeconds(r.timed.end.time.ms)} (${timeSourceText(r.timed)}), ajoaika ${formatDuration(r.timed.minutes)}`;
+      const more = detailsByRoute.get(r.routeName) || [];
+      const moreHtml = more.length ? `<details style="margin-top:10px;"><summary>+ Samalla rataosalla on ${more.length} muuta nopeaa osumaa</summary>${more.map(x => `<div class="small-note" style="margin-top:8px;">${escapeHtml(trainLabel(x.train))} · ${escapeHtml(x.from.name)}–${escapeHtml(x.to.name)} · <strong>${fmt(x.speed,1)} km/h</strong> · ${fmt(x.distance,3)} km · ${formatDuration(x.timed.minutes)}</div>`).join('')}</details>` : '';
+      div.innerHTML = `<div class="result-title">${escapeHtml(r.routeName)}: ${escapeHtml(r.from.name)}–${escapeHtml(r.to.name)}</div>
+        <div class="result-meta">${escapeHtml(trainLabel(r.train))} <span class="pill">${escapeHtml(r.train.trainType || '')}</span> · <strong>${fmt(r.speed,1)} km/h</strong> · ${fmt(r.distance,3)} km · ${timeText}</div>
+        <div class="muted">${escapeHtml(r.note || '')}</div>${moreHtml}`;
+      els.results.appendChild(div);
+    }
+  }
+
+  function dateRange(start, end) {
+    const out = [];
+    const s = new Date(start + 'T00:00:00');
+    const e = new Date(end + 'T00:00:00');
+    if (isNaN(s) || isNaN(e) || s > e) return out;
+    for (let d = s; d <= e; d = new Date(d.getTime() + 86400000)) out.push(new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10));
+    return out.slice(0, 31);
+  }
+
+
+  function updatePrintDirectionOptions() {
+    if (!els.printDirection || !els.printRouteSelect) return;
+    const routeName = els.printRouteSelect.value || '';
+    const route = routeData[routeName] || [];
+    els.printDirection.innerHTML = '';
+    if (!route.length) return;
+    const endpoints = routeNameEndpoints(routeName, route);
+    const opts = [
+      ['forward', `${endpoints.fromLabel} → ${endpoints.toLabel}`],
+      ['reverse', `${endpoints.toLabel} → ${endpoints.fromLabel}`]
+    ];
+    fillSelect(els.printDirection, opts);
+    const label = document.getElementById('printDirectionLabel');
+    if (label) label.textContent = `Kulkusuunta (${routeName})`;
+  }
+
+  function routeNameEndpoints(routeName, route) {
+    const parts = String(routeName || '').split('–').map(s => s.trim()).filter(Boolean);
+    const fromLabel = parts[0] || (route && route[0] ? route[0].name : 'Lähtö');
+    const toLabel = parts[1] || (route && route.length ? route[route.length - 1].name : 'Määrä');
+    return { fromLabel, toLabel };
+  }
+
+  function normalizedPlaceName(name) {
+    return String(name || '')
+      .toLowerCase()
+      .replace(/[()]/g, '')
+      .replace(/[-–—]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function endpointIndexForRouteName(route, endpointLabel, preferLast=false) {
+    if (!Array.isArray(route) || !route.length) return -1;
+    const target = normalizedPlaceName(endpointLabel);
+    const candidates = [];
+    route.forEach((place, idx) => {
+      const name = normalizedPlaceName(place.name);
+      let score = -1;
+      if (name === target) score = 100;
+      else if (name === `${target} asema`) score = 95;
+      else if (name.startsWith(`${target} asema `)) score = 90;
+      else if (name.startsWith(`${target} `)) score = 70;
+      else if (name.includes(` ${target} asema`)) score = 60;
+      if (score >= 0) {
+        // Pääasemaa suositaan tavara-, lajittelu- ja muiden teknisten osien yli.
+        if (/asema/.test(name)) score += 20;
+        if (/tavara|lajittelu|temu|arolampi|nokela|viinikka/.test(name)) score -= 30;
+        candidates.push({ idx, score });
+      }
+    });
+    if (!candidates.length) return -1;
+    candidates.sort((a,b) => b.score - a.score || (preferLast ? b.idx - a.idx : a.idx - b.idx));
+    return candidates[0].idx;
+  }
+
+  function routeForPrintedDirection(routeName, direction) {
+    const baseRoute = routeData[routeName] || [];
+    if (!baseRoute.length) return [];
+    const endpoints = routeNameEndpoints(routeName, baseRoute);
+    let a = endpointIndexForRouteName(baseRoute, endpoints.fromLabel, false);
+    let b = endpointIndexForRouteName(baseRoute, endpoints.toLabel, true);
+    if (a < 0) a = 0;
+    if (b < 0) b = baseRoute.length - 1;
+    let selected;
+    if (a <= b) selected = baseRoute.slice(a, b + 1);
+    else selected = baseRoute.slice(b, a + 1).reverse();
+    if (direction === 'reverse') selected = selected.slice().reverse();
+    return selected;
+  }
+
+  function applyPrintTypePreset(event) {
+    if (!els.printTrainType) return;
+    const source = event && event.target ? event.target.id : '';
+    if (source === 'printPassengerOnly' && els.printPassengerOnly.checked) {
+      if (els.printFreightOnly) els.printFreightOnly.checked = false;
+      restoreSelections(els.printTrainType, new Set(PASSENGER_TRAIN_TYPES));
+    } else if (source === 'printFreightOnly' && els.printFreightOnly.checked) {
+      if (els.printPassengerOnly) els.printPassengerOnly.checked = false;
+      restoreSelections(els.printTrainType, new Set(['T']));
+    } else if (source === 'printPassengerOnly' && !els.printPassengerOnly.checked) {
+      // Jätä käyttäjän nykyiset junatyyppivalinnat rauhaan, jos rajaus poistetaan.
+    } else if (source === 'printFreightOnly' && !els.printFreightOnly.checked) {
+      // Jätä käyttäjän nykyiset junatyyppivalinnat rauhaan, jos rajaus poistetaan.
+    }
+  }
+
+  async function buildPrintableList() {
+    els.buildPrintBtn.disabled = true;
+    els.buildPrintBtn.textContent = 'Laaditaan…';
+    try {
+      els.printTable.innerHTML = '';
+      const date = els.printStartDate.value;
+      if (!date) throw new Error('Valitse tulostettava päivä.');
+      const dates = [date];
+      const routeName = els.printRouteSelect.value;
+      const printDirection = els.printDirection ? els.printDirection.value : 'forward';
+      const route = routeForPrintedDirection(routeName, printDirection);
+      let wantedType = selectedValues(els.printTrainType);
+      const freightOnly = !!(els.printFreightOnly && els.printFreightOnly.checked);
+      if (freightOnly) wantedType = ['T'];
+      const useActual = !!(els.printActualTimes && els.printActualTimes.checked);
+      const columns = [];
+      els.printStatus.className = 'status';
+      els.printStatus.textContent = `Haetaan päivän ${formatFiDate(date)} junia…`;
+      for (const date of dates) {
+        const trains = await fetchTrains(date);
+        for (const train of trains) {
+          if (freightOnly && String(train.trainType || '').trim().toUpperCase() !== 'T') continue;
+          if (!trainMatchesType(train, wantedType, els.printPassengerOnly.checked)) continue;
+          const traversal = trainTraversalOnRoute(train, route, useActual);
+          if (!traversal) continue;
+          columns.push({ date, train, printDirection, ...traversal });
+        }
+      }
+      columns.sort((a,b) => a.startMs - b.startMs || Number(a.train.trainNumber)-Number(b.train.trainNumber));
+      els.printStatus.textContent = `Taulukossa ${columns.length} junaa. Junat on rajattu valitun kulkusuunnan ja valittujen junatyyppien mukaan. Paina Tulosta / tallenna PDF:nä.`;
+      renderTimetable(routeName, route, columns, useActual, date);
+    } catch (err) {
+      els.printStatus.className = 'status error';
+      els.printStatus.textContent = 'Tulostetaulukon laadinta epäonnistui: ' + (err && err.message ? err.message : String(err));
+    } finally {
+      els.buildPrintBtn.disabled = false;
+      els.buildPrintBtn.textContent = 'Laadi taulukko';
+    }
+  }
+
+  function trainTraversalOnRoute(train, route, useActual) {
+    if (!Array.isArray(route) || route.length < 2) return null;
+
+    // Aiempi toteutus vaati, että juna käy valitun rataosan molemmissa
+    // ääripäissä. Se pudotti pois osamatkan junat, esimerkiksi MUS-junan,
+    // joka kulkee valitulla suunnalla Oulusta Ylivieskaan mutta ei koko
+    // Oulu–Seinäjoki-väliä. Etsitään siksi pisin valitun kulkusuunnan mukainen
+    // jakso niistä rataosan liikennepaikoista, jotka junan aikataulusta löytyvät.
+    const hits = [];
+    for (let routeIndex = 0; routeIndex < route.length; routeIndex++) {
+      const place = route[routeIndex];
+      const rows = printRowsForCode(train, place.code, useActual);
+      for (const row of rows) hits.push({ routeIndex, place, ...row });
+    }
+    if (hits.length < 2) return null;
+
+    hits.sort((a,b) => a.routeIndex - b.routeIndex || a.idx - b.idx || a.time.ms - b.time.ms);
+
+    const chains = hits.map(hit => ({
+      items: [hit],
+      count: 1,
+      routeSpan: 0,
+      timeSpan: 0
+    }));
+
+    for (let i = 0; i < hits.length; i++) {
+      for (let j = 0; j < i; j++) {
+        if (hits[j].routeIndex >= hits[i].routeIndex) continue;
+        if (hits[j].idx >= hits[i].idx) continue;
+        if (hits[j].time.ms >= hits[i].time.ms) continue;
+        const candidateItems = chains[j].items.concat(hits[i]);
+        const candidate = {
+          items: candidateItems,
+          count: chains[j].count + 1,
+          routeSpan: hits[i].routeIndex - candidateItems[0].routeIndex,
+          timeSpan: hits[i].time.ms - candidateItems[0].time.ms
+        };
+        const current = chains[i];
+        if (
+          candidate.count > current.count ||
+          (candidate.count === current.count && candidate.routeSpan > current.routeSpan) ||
+          (candidate.count === current.count && candidate.routeSpan === current.routeSpan && candidate.timeSpan > current.timeSpan)
+        ) {
+          chains[i] = candidate;
+        }
+      }
+    }
+
+    chains.sort((a,b) =>
+      b.count - a.count ||
+      b.routeSpan - a.routeSpan ||
+      b.timeSpan - a.timeSpan ||
+      a.items[0].time.ms - b.items[0].time.ms
+    );
+    const chosen = chains[0];
+    if (!chosen || chosen.items.length < 2) return null;
+
+    const firstHit = chosen.items[0];
+    const lastHit = chosen.items[chosen.items.length - 1];
+    const direction = 'selected';
+    const timesByCode = new Map();
+    const lo = firstHit.idx;
+    const hi = lastHit.idx;
+    const routeStart = firstHit.routeIndex;
+    const routeEnd = lastHit.routeIndex;
+
+    for (let i = routeStart; i <= routeEnd; i++) {
+      const place = route[i];
+      const hit = bestPrintRowForPlace(train, place.code, lo, hi, useActual, direction);
+      if (hit) timesByCode.set(normCode(place.code), hit);
+    }
+
+    return { direction, startMs: firstHit.time.ms, endMs: lastHit.time.ms, timesByCode, routeStart, routeEnd };
+  }
+
+  function timetablePairForPrint(train, startCode, endCode, useActual) {
+    const starts = printRowsForCode(train, startCode, useActual);
+    const ends = printRowsForCode(train, endCode, useActual);
+    if (!starts.length || !ends.length) return null;
+    const candidates = [];
+    for (const s of starts) {
+      for (const e of ends) {
+        if (e.idx <= s.idx) continue;
+        if (e.time.ms <= s.time.ms) continue;
+        candidates.push({ start:s, end:e, minutes:(e.time.ms-s.time.ms)/60000 });
+      }
+    }
+    if (!candidates.length) return null;
+    candidates.sort((a,b) => a.start.idx-b.start.idx || a.end.idx-b.end.idx);
+    return candidates[0];
+  }
+
+  function printRowsForCode(train, code, useActual) {
+    const out = [];
+    for (const [idx, row] of (train.timeTableRows || []).entries()) {
+      if (normCode(row.stationShortCode) !== normCode(code)) continue;
+      const time = useActual ? rowTime(row, false) : scheduledRowTime(row);
+      if (!time || !Number.isFinite(time.ms)) continue;
+      out.push({ row, time, idx });
+    }
+    out.sort((a,b) => a.idx-b.idx || a.time.ms-b.time.ms);
+    return out;
+  }
+
+  function scheduledRowTime(row) {
+    if (!row || !row.scheduledTime) return null;
+    const ms = Date.parse(row.scheduledTime);
+    return Number.isFinite(ms) ? { ms, source:'aikataulu' } : null;
+  }
+
+  function bestPrintRowForPlace(train, code, lo, hi, useActual, direction) {
+    const rows = printRowsForCode(train, code, useActual).filter(r => r.idx >= lo && r.idx <= hi);
+    if (!rows.length) return null;
+
+    // Digitrafficissa ohittavallakin junalla voi olla sekä ARRIVAL- että DEPARTURE-rivi.
+    // Siksi trainStopping=false ohittaa ARRIVAL/DEPARTURE-parin tulkinnan pysähdykseksi.
+    const arrival = rows.find(r => String(r.row.type || '').toUpperCase() === 'ARRIVAL') || null;
+    const departure = rows.find(r => String(r.row.type || '').toUpperCase() === 'DEPARTURE') || null;
+    const hasArrival = !!arrival;
+    const hasDeparture = !!departure;
+    const hasExplicitStop = rows.some(r => r.row.trainStopping === true);
+    const hasExplicitPass = rows.some(r => r.row.trainStopping === false);
+    const isStop = hasExplicitStop || (!hasExplicitPass && hasArrival && hasDeparture);
+    const single = departure || arrival || rows[0];
+    return {
+      row: single.row,
+      time: single.time,
+      idx: single.idx,
+      arrival,
+      departure,
+      isPassThrough: !isStop
+    };
+  }
+
+  function printSelectedRows() {
+    window.print();
+  }
+
+  function renderTimetable(routeName, route, columns, useActual, date) {
+    const directionLabel = els.printDirection && els.printDirection.selectedOptions.length ? els.printDirection.selectedOptions[0].textContent : '';
+    const dateText = formatFiDate(date);
+    const title = `<h3>Tulostettava aikataulutaulukko ${escapeHtml(dateText)}: ${escapeHtml(routeName)}</h3><p>${escapeHtml(directionLabel)}</p><p class="print-only">${useActual ? 'Toteutuneet/arvioidut ajat' : 'Aikataulunmukaiset ajat'} · ajat tasaminuutteina · ohitusajat sulkeissa · pysähtyvillä junilla tulo- ja lähtöaika · enintään 10 junaa sivulla</p>`;
+    if (!columns.length) {
+      els.printTable.innerHTML = `${title}<div class="result">Ei junia valituilla rajauksilla.</div>`;
+      return;
+    }
+    const trainsPerPage = 10;
+    const chunks = [];
+    for (let i = 0; i < columns.length; i += trainsPerPage) chunks.push(columns.slice(i, i + trainsPerPage));
+    const pages = chunks.map((chunk, pageIndex) => {
+      const head = `<thead><tr><th>Liikennepaikka</th>${chunk.map((c) => {
+        const routeMeta = trainRouteMetaForHeader(c.train, route);
+        return `<th><div class="train-head">${escapeHtml(trainLabel(c.train))}</div>${routeMeta ? `<div class="train-route">${escapeHtml(routeMeta)}</div>` : ''}<div class="train-meta">${escapeHtml(formatFiDate(c.date))}</div></th>`;
+      }).join('')}</tr></thead>`;
+      const rows = route.map((place, placeIndex) => {
+        const isFirstPlace = placeIndex === 0;
+        const isLastPlace = placeIndex === route.length - 1;
+        const cells = chunk.map((c) => {
+          const hit = c.timesByCode.get(normCode(place.code));
+          return `<td>${hit ? formatTimetableCell(hit, isFirstPlace, isLastPlace) : ''}</td>`;
+        }).join('');
+        return `<tr><td>${escapeHtml(place.name)} <span class="place-km">(${escapeHtml(place.code)}) · km ${escapeHtml(place.km || '')}</span></td>${cells}</tr>`;
+      }).join('');
+      const sub = chunks.length > 1 ? `<p class="small-note no-print">Taulukon osa ${pageIndex + 1}/${chunks.length}, junat ${pageIndex * trainsPerPage + 1}–${pageIndex * trainsPerPage + chunk.length}</p>` : '';
+      return `<div class="timetable-page">${sub}<div class="timetable-wrap"><table class="timetable">${head}<tbody>${rows}</tbody></table></div></div>`;
+    }).join('');
+    els.printTable.innerHTML = `${title}${pages}`;
+  }
+
+  function formatTimetableCell(hit, isFirstPlace, isLastPlace) {
+    if (!hit) return '';
+    const arr = hit.arrival && hit.arrival.time ? formatTime(hit.arrival.time.ms) : '';
+    const dep = hit.departure && hit.departure.time ? formatTime(hit.departure.time.ms) : '';
+    const single = hit.time ? formatTime(hit.time.ms) : '';
+    if (hit.isPassThrough) return single ? `(${escapeHtml(single)})` : '';
+    if (isFirstPlace) return escapeHtml(dep || arr || single);
+    if (isLastPlace) return escapeHtml(arr || dep || single);
+    if (arr && dep && arr !== dep) return `<div class="timepair"><div>${escapeHtml(arr)}</div><div>${escapeHtml(dep)}</div></div>`;
+    return escapeHtml(dep || arr || single);
+  }
+
+  async function runSearch() {
+    els.searchBtn.disabled = true;
+    els.searchBtn.textContent = 'Haetaan…';
+    try {
+      clearResults();
+      const opts = readSearchOptions();
+      if (!opts.routeName) throw new Error('Valitse rataosa.');
+      if (opts.routeName === ALL_ROUTES_VALUE) {
+        await runNationalSearch();
+        return;
+      }
+      els.speedStatus.className = 'status';
+      els.speedStatus.textContent = 'Haetaan junatietoja…';
+      const trains = await fetchTrains(opts.date);
+      updateTrainTypesFromTrains(trains);
+      els.speedStatus.textContent = `Haettu ${trains.length} junaa. Lasketaan keskinopeuksia…`;
+      const all = analyzeRoute(trains, opts.routeName, opts);
+      const limited = all.slice(0, opts.limit);
+      updateStats(all, limited, opts.routeName);
+      renderResults(limited);
+      const capText = Number.isFinite(opts.maxSpeed) ? `${fmt(opts.minSpeed,0)}–${fmt(opts.maxSpeed,0)} km/h` : `vähintään ${fmt(opts.minSpeed,0)} km/h`;
+      els.speedStatus.textContent = `Haettu ${trains.length} junaa. Nopeushaku rajattu rataosaan ${opts.routeName} ja keskinopeuksiin ${capText}. Näytetään enintään ${opts.limit} nopeinta osumaa. Laskenta käyttää ${opts.actualOnly ? 'vain toteutuneita aikoja' : 'toteutuneita, arvioituja tai aikataulun mukaisia aikoja'}${opts.passengerOnly ? ', ja tuloksissa ovat vain aikataulunmukaiset matkustajajunat' : ''} ja yhdistää lyhyet aikavälit vähintään 6 minuutin laskentajaksoksi. Selvästi junatyypille epärealistiset keskinopeudet jätetään pois; esimerkiksi T-junille käytetään 120 km/h turvarajaa, IC-junille 205 km/h turvarajaa ja S-junille 205 km/h turvarajaa, paitsi Kerava–Hakosilta-rataosalla 225 km/h.`;
+    } catch (err) {
+      els.speedStatus.className = 'status error';
+      els.speedStatus.textContent = 'Junatietojen haku epäonnistui: ' + (err && err.message ? err.message : String(err));
+    } finally {
+      els.searchBtn.disabled = false;
+      els.searchBtn.textContent = 'Hae junat';
+    }
+  }
+
+  function readSearchOptions() {
+    const minSpeed = Number(els.minSpeed.value);
+    const maxSpeed = els.maxSpeed.value === '' ? NaN : Number(els.maxSpeed.value);
+    return {
+      routeName: els.speedRouteSelect.value,
+      date: els.speedDate.value,
+      minSpeed: Number.isFinite(minSpeed) ? minSpeed : 0,
+      maxSpeed: Number.isFinite(maxSpeed) ? maxSpeed : NaN,
+      trainType: [],
+      limit: Math.max(1, Math.min(200, Number(els.resultLimit.value) || 10)),
+      nationalLimit: Math.max(1, Math.min(200, Number(els.nationalLimit.value) || 20)),
+      passengerOnly: !!els.passengerOnly.checked,
+      actualOnly: els.actualOnly.checked,
+      sustainedOnly: els.sustainedOnly.checked
+    };
+  }
+
+  function updateTrainTypesFromTrains(trains) {
+    const currentSpeed = new Set(selectedValues(els.trainType));
+    const currentPrint = new Set(selectedValues(els.printTrainType));
+    const types = [...ALL_KNOWN_TRAIN_TYPES];
+    for (const train of trains || []) if (train && train.trainType) types.push(train.trainType);
+    const unique = Array.from(new Set(types.filter(Boolean))).sort((a,b) => a.localeCompare(b, 'fi', { sensitivity:'base' }));
+    fillTrainTypes(['Kaikki junatyypit', ...unique]);
+    fillSelect(els.printTrainType, unique.map(t => [t, t]));
+    restoreSelections(els.trainType, currentSpeed, ['Kaikki junatyypit']);
+    restoreSelections(els.printTrainType, currentPrint, Array.from(PASSENGER_TRAIN_TYPES));
+  }
+
+  function restoreSelections(select, wantedSet, defaults = []) {
+    if (!select) return;
+    const wanted = wantedSet && wantedSet.size ? wantedSet : new Set(defaults);
+    let any = false;
+    for (const option of Array.from(select.options || [])) {
+      option.selected = wanted.has(option.value);
+      if (option.selected) any = true;
+    }
+    if (!any && select.options.length) select.options[0].selected = true;
+  }
+
+  function clearResults() {
+    els.results.innerHTML = '';
+    els.statTrains.textContent = '–';
+    els.statSegments.textContent = '–';
+    els.statFastest.textContent = '–';
+  }
+
+  function updateStats(all, shown, routeName) {
+    const uniqueTrains = new Set(all.map(r => `${r.train.departureDate}-${r.train.trainNumber}`));
+    els.statTrains.textContent = uniqueTrains.size ? String(uniqueTrains.size) : '0';
+    els.statSegments.textContent = all.length ? String(new Set(all.map(r => r.key)).size) : '0';
+    els.statFastest.textContent = all.length ? `${fmt(all[0].speed,1)} km/h` : '–';
+  }
+
+  function renderResults(results) {
+    els.results.innerHTML = '';
+    if (!results.length) {
+      els.results.innerHTML = '<div class="result"><strong>Ei osumia.</strong><div class="muted">Kokeile pienempää vähimmäiskeskinopeutta, toista päivää tai poista toteutuneiden aikojen rajaus.</div></div>';
+      return;
+    }
+    for (const r of results) {
+      const div = document.createElement('div');
+      div.className = 'result';
+      const dir = `${escapeHtml(r.from.name)}–${escapeHtml(r.to.name)}`;
+      const flag = r.suspicious ? '<span class="bang" title="Yli 20 % nopeampi kuin toiseksi nopein samalla välillä">!</span>' : '';
+      const title = `${flag}${escapeHtml(r.routeName)}: ${dir}`;
+      const timeText = `${formatTimeWithSeconds(r.timed.start.time.ms)}–${formatTimeWithSeconds(r.timed.end.time.ms)} (${timeSourceText(r.timed)}), ajoaika ${formatDuration(r.timed.minutes)}`;
+      div.innerHTML = `
+        <div class="result-title">${title}</div>
+        <div class="result-meta">${escapeHtml(trainLabel(r.train))} <span class="pill">${escapeHtml(r.train.trainType || '')}</span> · <strong>${fmt(r.speed,1)} km/h</strong> · ${fmt(r.distance,3)} km · ${timeText}</div>
+        <div class="muted">${escapeHtml(r.note || '')}${r.suspicious ? ' Mahdollinen pyöristysvirhe.' : ''}</div>`;
+      els.results.appendChild(div);
+    }
+  }
+
+  function timeSourceText(timed) {
+    const a = timed.start.time.source;
+    const b = timed.end.time.source;
+    return a === b ? a : `lähtö ${a}, saapuminen ${b}`;
+  }
+
+  function updateDistanceSection() {
+    const route = routeData[els.routeSelect.value] || [];
+    const pairs = route.map((p,i) => [String(i), `${p.name} (${p.code}) · km ${p.km}`]);
+    fillSelect(els.fromSelect, pairs);
+    fillSelect(els.toSelect, pairs);
+    if (route.length > 1) els.toSelect.value = String(route.length - 1);
+    renderRouteTable(route);
+    updateDistanceCards();
+  }
+
+  function updateDistanceCards() {
+    const route = routeData[els.routeSelect.value] || [];
+    const a = Number(els.fromSelect.value);
+    const b = Number(els.toSelect.value);
+    if (!route.length || !Number.isFinite(a) || !Number.isFinite(b) || a === b) {
+      els.trueDistance.textContent = '–'; els.kmDistance.textContent = '–'; els.distanceDiff.textContent = '–';
+      els.distanceStatus.textContent = 'Valitse kaksi eri liikennepaikkaa.';
+      return;
+    }
+    const dist = trueDistanceBetween(route, a, b);
+    const kmDist = Math.abs(parseKm(route[b].km) - parseKm(route[a].km));
+    if (!Number.isFinite(dist)) {
+      els.trueDistance.textContent = 'puuttuu'; els.kmDistance.textContent = fmt(kmDist,3) + ' km'; els.distanceDiff.textContent = '–';
+      els.distanceStatus.textContent = 'Jollakin välissä olevalla osuudella ei ole välimatka-arvoa.';
+      return;
+    }
+    const diff = dist - kmDist;
+    els.trueDistance.textContent = fmt(dist,3) + ' km';
+    els.kmDistance.textContent = fmt(kmDist,3) + ' km';
+    els.distanceDiff.textContent = (diff > 0 ? '+' : '') + fmt(diff,3) + ' km';
+    els.distanceStatus.textContent = `Laskettu summaamalla välimatkat väliltä ${route[a].name} – ${route[b].name}.`;
+  }
+
+  function trueDistanceBetween(route, a, b) {
+    let from = Math.min(a,b), to = Math.max(a,b), sum = 0;
+    for (let i = from + 1; i <= to; i++) {
+      const d = Number(route[i].distanceFromPrevious);
+      if (!Number.isFinite(d)) return NaN;
+      sum += d;
+    }
+    return sum;
+  }
+
+  function renderRouteTable(route) {
+    let html = '<table><thead><tr><th>Liikennepaikka</th><th>Km-sijainti</th><th>Välimatka</th><th>Kumul.</th><th>Ero ratakm:iin</th></tr></thead><tbody>';
+    let trueCum = 0;
+    const startKm = route.length ? parseKm(route[0].km) : 0;
+    for (let i = 0; i < route.length; i++) {
+      const p = route[i];
+      if (i > 0) trueCum += Number(p.distanceFromPrevious) || 0;
+      const kmDelta = parseKm(p.km) - startKm;
+      const diff = trueCum - kmDelta;
+      const diffClass = Math.abs(diff) >= 1 ? 'warn' : '';
+      html += `<tr><td>${escapeHtml(p.name)} <span class="muted">(${escapeHtml(p.code)})</span></td><td>${escapeHtml(p.km || '')}</td><td>${p.distanceFromPrevious == null ? '–' : fmt(Number(p.distanceFromPrevious),3)}</td><td>${fmt(trueCum,3)}</td><td class="${diffClass}">${diff > 0 ? '+' : ''}${fmt(diff,3)} km</td></tr>`;
+    }
+    html += '</tbody></table>';
+    els.routeTable.innerHTML = html;
+  }
+
+  function parseKm(km) {
+    const m = String(km || '').match(/(\d+)\s*\+\s*(\d+)/);
+    if (!m) return NaN;
+    return Number(m[1]) + Number(m[2]) / 1000;
+  }
+
+  function fmt(n, decimals = 1) {
+    return Number(n).toLocaleString('fi-FI', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
+
+  function formatTime(ms) {
+    return new Date(ms).toLocaleTimeString('fi-FI', { hour:'2-digit', minute:'2-digit' }).replace(':','.');
+  }
+
+  function formatTimeWithSeconds(ms) {
+    return new Date(ms).toLocaleTimeString('fi-FI', { hour:'2-digit', minute:'2-digit', second:'2-digit' }).replace(/:/g,'.');
+  }
+
+  function formatFiDate(isoDate) {
+    const d = new Date(String(isoDate) + 'T12:00:00');
+    if (isNaN(d)) return String(isoDate || '');
+    const weekdays = ['Su','Ma','Ti','Ke','To','Pe','La'];
+    return `${weekdays[d.getDay()]} ${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+  }
+
+  function formatDuration(minutes) {
+    const totalSeconds = Math.max(0, Math.round(Number(minutes || 0) * 60));
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return s ? `${m} min ${String(s).padStart(2,'0')} s` : `${m} min`;
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  return { init };
+})();
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', App.init);
+else App.init();
+</script>
+</body>
+</html>
