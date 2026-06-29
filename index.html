@@ -93,6 +93,7 @@
   .timetable thead th:first-child { z-index:3; background:#eef1f4; }
   .timetable .train-head { font-weight:800; line-height:1.15; }
   .timetable .train-meta { color:#4f5b68; font-size:.72rem; margin-top:2px; }
+  .timetable .train-route { color:#4f5b68; font-size:.72rem; font-style:italic; margin-top:2px; }
   .timetable .place-km { color:#5d6875; font-size:.84em; }
   .timetable .timepair { line-height:1.08; }
   .timetable .timepair div + div { margin-top:1px; }
@@ -117,13 +118,14 @@
     table { font-size:8pt; }
     th,td { border-bottom:1px solid #aaa; color:#000 !important; }
     .timetable-wrap { overflow:visible; border:0; background:#fff !important; color:#000 !important; }
-    .timetable-page { break-after:page; page-break-after:always; width:fit-content; max-width:100%; margin-left:auto; margin-right:auto; }
+    .timetable-page { break-after:page; page-break-after:always; width:fit-content; max-width:100%; margin-left:auto; margin-right:auto; text-align:center; }
     .timetable-page:last-child { break-after:auto; page-break-after:auto; }
     .timetable { width:auto; min-width:0; font-size:7.2pt; table-layout:auto; background:#fff !important; color:#000 !important; margin-left:auto; margin-right:auto; }
+    .timetable-wrap { width:fit-content; max-width:100%; margin-left:auto; margin-right:auto; }
     .timetable th, .timetable td { padding:2px 3px; background:#fff !important; color:#000 !important; border-color:#999; }
     .timetable th:first-child, .timetable td:first-child, .timetable thead th { position:static; background:#fff !important; color:#000 !important; }
     .timetable th:first-child, .timetable td:first-child { min-width:95px; max-width:150px; white-space:normal; }
-    .timetable .train-meta, .timetable .place-km { color:#333 !important; }
+    .timetable .train-meta, .timetable .train-route, .timetable .place-km { color:#333 !important; }
   }
   @media (max-width:760px) {
     .header-inner { flex-direction:column; }
@@ -141,7 +143,7 @@
     <div>
       <h1>Suomen rataverkon aikataulu- ja nopeustyökalut</h1>
       <p>Junien aikataulujen, rataosien keskinopeuksien, etäisyyksien ja reittien analysointiin.</p>
-      <div class="version">Kehitysversio 5.11</div>
+      <div class="version">Kehitysversio 5.12</div>
     </div>
     <div class="theme-toggle" aria-label="Teema">
       <button type="button" data-theme="dark">Tumma</button>
@@ -270,7 +272,7 @@
   </section>
 </main>
 <footer>
-  Rataosien nopeuslaskuri · kehitysversio 5.11 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
+  Rataosien nopeuslaskuri · kehitysversio 5.12 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
 </footer>
 
 <script>
@@ -783,6 +785,45 @@ const App = (() => {
     return `${type} ${number}`.trim() || 'Juna';
   }
 
+  function trainEndpointRows(train) {
+    const rows = (train && Array.isArray(train.timeTableRows)) ? train.timeTableRows : [];
+    const usable = rows.filter(r => r && r.stationShortCode);
+    if (!usable.length) return { first:null, last:null };
+    const commercial = usable.filter(r => r.commercialStop === true || r.trainStopping === true);
+    const source = commercial.length >= 2 ? commercial : usable;
+    return { first: source[0] || null, last: source[source.length - 1] || null };
+  }
+
+  function trainEndpointCodes(train) {
+    const endpoints = trainEndpointRows(train);
+    return {
+      start: endpoints.first ? normCode(endpoints.first.stationShortCode) : '',
+      end: endpoints.last ? normCode(endpoints.last.stationShortCode) : ''
+    };
+  }
+
+  function trainRouteMetaForHeader(train, selectedRoute) {
+    const codes = trainEndpointCodes(train);
+    if (!codes.start || !codes.end || !Array.isArray(selectedRoute) || !selectedRoute.length) return '';
+    const routeCodes = new Set(selectedRoute.map(p => normCode(p.code)).filter(Boolean));
+    const startOutside = !routeCodes.has(codes.start);
+    const endOutside = !routeCodes.has(codes.end);
+    if (!startOutside && !endOutside) return '';
+    const start = displayCode(codes.start);
+    const end = displayCode(codes.end);
+    return start && end ? `${start}–${end}` : '';
+  }
+
+  function displayCode(code) {
+    const wanted = normCode(code);
+    if (!wanted) return '';
+    for (const route of Object.values(routeData)) {
+      const place = (route || []).find(p => normCode(p.code) === wanted);
+      if (place && place.code) return String(place.code);
+    }
+    return String(code);
+  }
+
   function isPassengerTrain(train) {
     const type = String(train && train.trainType || '').trim().toUpperCase();
     return PASSENGER_TRAIN_TYPES.has(type);
@@ -794,12 +835,18 @@ const App = (() => {
   }
 
   function trainMatchesType(train, selectedType, passengerOnly = false) {
-    if (passengerOnly && !isPassengerTrain(train)) return false;
     const type = String(train && train.trainType || '').trim().toUpperCase();
     const selected = Array.isArray(selectedType) ? selectedType : (selectedType ? [selectedType] : []);
     const normalized = selected.map(v => String(v || '').trim().toUpperCase()).filter(Boolean);
-    if (!normalized.length || normalized.includes('KAIKKI JUNATYYPIT')) return true;
-    return normalized.includes(type);
+    const hasExplicitTypeSelection = normalized.length && !normalized.includes('KAIKKI JUNATYYPIT');
+
+    // Jos käyttäjä valitsee junatyypin käsin, kunnioitetaan valintaa myös silloin,
+    // kun oletuksena päällä oleva matkustajajunarajaus on jäänyt päälle. Tämä korjaa
+    // museojunien, kuten MUS-tyypin PoRhan lättäjunien, putoamisen tulosteesta.
+    if (hasExplicitTypeSelection) return normalized.includes(type);
+
+    if (passengerOnly && !isPassengerTrain(train)) return false;
+    return true;
   }
 
   function rowTime(row, actualOnly) {
@@ -1210,18 +1257,77 @@ const App = (() => {
 
   function trainTraversalOnRoute(train, route, useActual) {
     if (!Array.isArray(route) || route.length < 2) return null;
-    const first = route[0], last = route[route.length - 1];
-    const chosen = timetablePairForPrint(train, first.code, last.code, useActual);
-    if (!chosen) return null;
+
+    // Aiempi toteutus vaati, että juna käy valitun rataosan molemmissa
+    // ääripäissä. Se pudotti pois osamatkan junat, esimerkiksi MUS-junan,
+    // joka kulkee valitulla suunnalla Oulusta Ylivieskaan mutta ei koko
+    // Oulu–Seinäjoki-väliä. Etsitään siksi pisin valitun kulkusuunnan mukainen
+    // jakso niistä rataosan liikennepaikoista, jotka junan aikataulusta löytyvät.
+    const hits = [];
+    for (let routeIndex = 0; routeIndex < route.length; routeIndex++) {
+      const place = route[routeIndex];
+      const rows = printRowsForCode(train, place.code, useActual);
+      for (const row of rows) hits.push({ routeIndex, place, ...row });
+    }
+    if (hits.length < 2) return null;
+
+    hits.sort((a,b) => a.routeIndex - b.routeIndex || a.idx - b.idx || a.time.ms - b.time.ms);
+
+    const chains = hits.map(hit => ({
+      items: [hit],
+      count: 1,
+      routeSpan: 0,
+      timeSpan: 0
+    }));
+
+    for (let i = 0; i < hits.length; i++) {
+      for (let j = 0; j < i; j++) {
+        if (hits[j].routeIndex >= hits[i].routeIndex) continue;
+        if (hits[j].idx >= hits[i].idx) continue;
+        if (hits[j].time.ms >= hits[i].time.ms) continue;
+        const candidateItems = chains[j].items.concat(hits[i]);
+        const candidate = {
+          items: candidateItems,
+          count: chains[j].count + 1,
+          routeSpan: hits[i].routeIndex - candidateItems[0].routeIndex,
+          timeSpan: hits[i].time.ms - candidateItems[0].time.ms
+        };
+        const current = chains[i];
+        if (
+          candidate.count > current.count ||
+          (candidate.count === current.count && candidate.routeSpan > current.routeSpan) ||
+          (candidate.count === current.count && candidate.routeSpan === current.routeSpan && candidate.timeSpan > current.timeSpan)
+        ) {
+          chains[i] = candidate;
+        }
+      }
+    }
+
+    chains.sort((a,b) =>
+      b.count - a.count ||
+      b.routeSpan - a.routeSpan ||
+      b.timeSpan - a.timeSpan ||
+      a.items[0].time.ms - b.items[0].time.ms
+    );
+    const chosen = chains[0];
+    if (!chosen || chosen.items.length < 2) return null;
+
+    const firstHit = chosen.items[0];
+    const lastHit = chosen.items[chosen.items.length - 1];
     const direction = 'selected';
     const timesByCode = new Map();
-    const lo = Math.min(chosen.start.idx, chosen.end.idx);
-    const hi = Math.max(chosen.start.idx, chosen.end.idx);
-    for (const place of route) {
+    const lo = firstHit.idx;
+    const hi = lastHit.idx;
+    const routeStart = firstHit.routeIndex;
+    const routeEnd = lastHit.routeIndex;
+
+    for (let i = routeStart; i <= routeEnd; i++) {
+      const place = route[i];
       const hit = bestPrintRowForPlace(train, place.code, lo, hi, useActual, direction);
       if (hit) timesByCode.set(normCode(place.code), hit);
     }
-    return { direction, startMs: chosen.start.time.ms, endMs: chosen.end.time.ms, timesByCode };
+
+    return { direction, startMs: firstHit.time.ms, endMs: lastHit.time.ms, timesByCode, routeStart, routeEnd };
   }
 
   function timetablePairForPrint(train, startCode, endCode, useActual) {
@@ -1290,7 +1396,7 @@ const App = (() => {
   function renderTimetable(routeName, route, columns, useActual, date) {
     const directionLabel = els.printDirection && els.printDirection.selectedOptions.length ? els.printDirection.selectedOptions[0].textContent : '';
     const dateText = formatFiDate(date);
-    const title = `<h3>Tulostettava aikataulutaulukko: ${escapeHtml(routeName)}</h3><p>${escapeHtml(directionLabel)} · ${escapeHtml(dateText)}</p><p class="print-only">${useActual ? 'Toteutuneet/arvioidut ajat' : 'Aikataulunmukaiset ajat'} · ajat tasaminuutteina · ohitusajat sulkeissa · pysähtyvillä junilla tulo- ja lähtöaika · enintään 10 junaa sivulla</p>`;
+    const title = `<h3>Tulostettava aikataulutaulukko ${escapeHtml(dateText)}: ${escapeHtml(routeName)}</h3><p>${escapeHtml(directionLabel)}</p><p class="print-only">${useActual ? 'Toteutuneet/arvioidut ajat' : 'Aikataulunmukaiset ajat'} · ajat tasaminuutteina · ohitusajat sulkeissa · pysähtyvillä junilla tulo- ja lähtöaika · enintään 10 junaa sivulla</p>`;
     if (!columns.length) {
       els.printTable.innerHTML = `${title}<div class="result">Ei junia valituilla rajauksilla.</div>`;
       return;
@@ -1299,7 +1405,10 @@ const App = (() => {
     const chunks = [];
     for (let i = 0; i < columns.length; i += trainsPerPage) chunks.push(columns.slice(i, i + trainsPerPage));
     const pages = chunks.map((chunk, pageIndex) => {
-      const head = `<thead><tr><th>Liikennepaikka</th>${chunk.map((c) => `<th><div class="train-head">${escapeHtml(trainLabel(c.train))}</div><div class="train-meta">${escapeHtml(formatFiDate(c.date))}</div></th>`).join('')}</tr></thead>`;
+      const head = `<thead><tr><th>Liikennepaikka</th>${chunk.map((c) => {
+        const routeMeta = trainRouteMetaForHeader(c.train, route);
+        return `<th><div class="train-head">${escapeHtml(trainLabel(c.train))}</div>${routeMeta ? `<div class="train-route">${escapeHtml(routeMeta)}</div>` : ''}<div class="train-meta">${escapeHtml(formatFiDate(c.date))}</div></th>`;
+      }).join('')}</tr></thead>`;
       const rows = route.map((place, placeIndex) => {
         const isFirstPlace = placeIndex === 0;
         const isLastPlace = placeIndex === route.length - 1;
