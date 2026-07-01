@@ -109,6 +109,10 @@
   .button-row { display:flex; gap:10px; flex-wrap:wrap; margin:12px 0; }
   button.secondary { cursor:pointer; border:1px solid var(--border); border-radius:10px; background:var(--panel2); color:var(--text); padding:10px 14px; font-weight:800; font-size:.95rem; }
   .small-note { font-size:.82rem; color:var(--dim); }
+  .version-history { margin-bottom:10px; }
+  .version-history h3 { margin:12px 0 4px; font-size:1rem; }
+  .version-history ul { margin:6px 0 0 1.1rem; padding:0; color:var(--dim); }
+  .version-history li { margin:4px 0; }
   .print-only { display:none; }
   .modal-backdrop { position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; padding:18px; background:rgba(0,0,0,.58); }
   .modal-backdrop.open { display:flex; }
@@ -155,7 +159,7 @@
     <div>
       <h1>Suomen rataverkon aikataulu- ja nopeustyökalut</h1>
       <p>Junien aikataulujen, rataosien keskinopeuksien, etäisyyksien ja reittien analysointiin.</p>
-      <div class="version">Kehitysversio 5.16</div>
+      <div class="version">Kehitysversio 5.17</div>
     </div>
     <div class="theme-toggle" aria-label="Teema">
       <button type="button" data-theme="dark">Tumma</button>
@@ -285,9 +289,51 @@
       <div id="routeTable"></div>
     </details>
   </section>
+
+  <section class="card version-history" id="versionHistory">
+    <h2>Projektin eteneminen</h2>
+    <p>Kooste viimeisimmistä kehitysversioista ja tärkeimmistä korjauksista.</p>
+
+    <h3>Kehitysversio 5.17</h3>
+    <ul>
+      <li>Lisätty sivun loppuun näkyvä versionhistoria, jotta projektin eteneminen on helpompi seurata.</li>
+    </ul>
+
+    <h3>Kehitysversio 5.16</h3>
+    <ul>
+      <li>Tarkistettu rataosien etäisyysdata sisäisesti kumulatiivisia välimatkoja vasten.</li>
+      <li>Korjattu Turku tavara–Turku satama -väli kahdessa reitissä arvoon 2,05 km.</li>
+    </ul>
+
+    <h3>Kehitysversio 5.15</h3>
+    <ul>
+      <li>Korjattu Kouvola–Kotka-radan Myllykosken edeltävä välimatka, joka aiheutti liian suuria keskinopeuksia.</li>
+      <li>Päivitetty junatyyppikohtaiset suurimmat sallitut nopeudet ja poistettu vanha S-junien erikoispoikkeus.</li>
+    </ul>
+
+    <h3>Kehitysversio 5.14</h3>
+    <ul>
+      <li>Lisätty junanumeroa klikkaamalla avautuva koko junan aikataulu.</li>
+      <li>Koko junan aikataulussa näytetään oletuksena pysähdyspaikat ja erillisellä valinnalla kaikki liikennepaikat.</li>
+      <li>Parannettu Fintraffic-hakujen käyttöä välimuistilla, pyyntöjen yhdistämisellä ja uudelleenyrityksillä.</li>
+    </ul>
+
+    <h3>Kehitysversio 5.13</h3>
+    <ul>
+      <li>Parannettu tulostettavaa aikataulutaulukkoa: 10 junaa sivulla, saapumis- ja lähtöaika samassa solussa sekä ohitusajat sulkeissa.</li>
+      <li>Lisätty aikatauluotsikkoon päivämäärä ja junanumeron alle koko reitin alku- ja loppuaseman lyhenteet tarvittaessa.</li>
+      <li>Korjattu junatyyppien valintaa siten, että esivalinnat voi tyhjentää helpommin ja valita omat junatyypit.</li>
+    </ul>
+
+    <h3>Kehitysversio 5.12</h3>
+    <ul>
+      <li>Lisätty sivun kuvaukseen aikataulujen, keskinopeuksien, etäisyyksien ja reittien analysointi.</li>
+      <li>Yhtenäistetty kehitysversiotiedot sivun yläosaan ja alatunnisteeseen.</li>
+    </ul>
+  </section>
 </main>
 <footer>
-  Rataosien nopeuslaskuri · kehitysversio 5.16 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
+  Rataosien nopeuslaskuri · kehitysversio 5.17 · Data: Väylävirasto, Luettelo rautatieliikennepaikoista 1.1.2024 · Avoimen datan lähteet: Fintraffic/Digitraffic-rajapinta ja Väyläviraston julkaisu 32/2024. Data on poimittu "Luettelo rautatieliikennepaikoista 1.1.2024" -dokumentin (Väyläviraston julkaisuja 32/2024) kohdasta 6 Rautatieliikennepaikat ja liikennepaikkojen osat rataosittain. Laskenta käyttää peräkkäisten liikennepaikkojen välimatka-arvoja, ei pelkkää km-sijaintien erotusta.
 </footer>
 
 <div class="modal-backdrop no-print" id="trainDetailModal" aria-hidden="true">
